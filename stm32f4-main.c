@@ -170,7 +170,6 @@ int main(void)
   HAL_TIM_PWM_Start(&htim3, TIM_CHANNEL_1);
 
   /* Mesaj Ayarları: ID: 0x103 (Dashboard bu ID'yi bekliyor) */
-  TxHeader.StdId = 0x103U;
   TxHeader.IDE = CAN_ID_STD;
   TxHeader.RTR = CAN_RTR_DATA;
   TxHeader.DLC = 8U; /* 8 byte veri yolluyoruz */
@@ -249,20 +248,50 @@ int main(void)
 	  	          __HAL_TIM_SET_COMPARE(&htim3, TIM_CHANNEL_1, gaz_degeri);
 	  	      }
 
-	  	      // 2. CAN Mesajı Gönderme (Her 500ms'de bir)
-	  	      static uint32_t can_zaman = 0;
-	  	      if (su_anki_zaman - can_zaman >= 500)
-	  	      {
-	  	          // TxData[0] Hız olsun, TxData[1] Amper olsun (Dashboard'da görmek için)
-	  	          TxData[0] = (uint8_t)tam_sayi_kalibre_hiz;
-	  	          TxData[1] = (uint8_t)(amper + 100); // Negatif gelirse diye 100 ekleyip gönderebilirsin (Dashboard'da 100 çıkarırsın)
+	  	    /* --- ADIM 3: CAN BUS HABERLEŞMESİ (Her 500ms'de bir) --- */
+	  	    static uint32_t can_zaman = 0;
+	  	    if (su_anki_zaman - can_zaman >= 500)
+	  	    {
+	  	        // --- MESAJ 1: HIZ, GÜÇ VE TÜKETİM (0x101) ---
+	  	        TxHeader.StdId = 0x101;
+	  	        TxHeader.DLC = 8;
+	  	        TxData[0] = (uint8_t)tam_sayi_kalibre_hiz;
 
-	  	          if (HAL_CAN_AddTxMessage(&hcan1, &TxHeader, TxData, &TxMailbox) == HAL_OK)
-	  	          {
-	  	              HAL_GPIO_TogglePin(GPIOD, GPIO_PIN_15);
-	  	          }
-	  	          can_zaman = su_anki_zaman;
-	  	      }
+	  	        int16_t guc_send = (int16_t)(anlik_kw * 10);
+	  	        TxData[1] = (uint8_t)(guc_send & 0xFF);
+	  	        TxData[2] = (uint8_t)((guc_send >> 8) & 0xFF);
+
+	  	        uint16_t tuketim_send = (uint16_t)(anlik_tuketim_100km * 10);
+	  	        TxData[3] = (uint8_t)(tuketim_send & 0xFF);
+	  	        TxData[4] = (uint8_t)((tuketim_send >> 8) & 0xFF);
+
+	  	        // Mesajı gönder ve boş mailbox bekle
+	  	        while(HAL_CAN_GetTxMailboxesFreeLevel(&hcan1) == 0);
+	  	        HAL_CAN_AddTxMessage(&hcan1, &TxHeader, TxData, &TxMailbox);
+
+	  	        // Küçücük bir nefes payı (Opsiyonel ama garantidir)
+	  	        HAL_Delay(5);
+
+	  	        // --- MESAJ 2: BATARYA VE MENZİL (0x102) ---
+	  	        TxHeader.StdId = 0x102;
+	  	        TxData[0] = (uint8_t)batarya_yuzdesi;
+
+	  	        uint16_t menzil_send = (uint16_t)kalan_menzil_km;
+	  	        TxData[1] = (uint8_t)(menzil_send & 0xFF);
+	  	        TxData[2] = (uint8_t)((menzil_send >> 8) & 0xFF);
+
+	  	        uint16_t trip_send = (uint16_t)(toplam_kwh * 100);
+	  	        TxData[3] = (uint8_t)(trip_send & 0xFF);
+	  	        TxData[4] = (uint8_t)((trip_send >> 8) & 0xFF);
+
+	  	        while(HAL_CAN_GetTxMailboxesFreeLevel(&hcan1) == 0);
+	  	        if (HAL_CAN_AddTxMessage(&hcan1, &TxHeader, TxData, &TxMailbox) == HAL_OK)
+	  	        {
+	  	            HAL_GPIO_TogglePin(GPIOD, GPIO_PIN_15); // Turuncu/Mavi LED yanıp söner
+	  	        }
+
+	  	        can_zaman = su_anki_zaman;
+	  	    }
 	      // DİKKAT: Burada ASLA HAL_Delay(500) olmamalı!
 	      // Delay koyarsan işlemci o sırada hiçbir şey yapamaz, encoder'ı bile kaçırabilirsin.
 
