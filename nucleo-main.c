@@ -57,9 +57,16 @@ FDCAN_RxHeaderTypeDef RxHeader;
 uint8_t RxData[8];
 const char term_msg[] = "CAN Verisi Basariyla Alindi!\r\n";
 
-uint8_t tam_sayi_kalibre_hiz = 0;
-uint8_t gelen_hiz = 0;
+int tam_sayi_kalibre_hiz = 0;
+int gelen_hiz = 0;
 int gelen_akim_ofsetli = 0;
+
+
+float gelen_anlik_kw = 0.0f;
+float gelen_tuketim_100km = 0.0f;
+int gelen_batarya_yuzde = 0;
+float gelen_menzil_km = 0.0f;
+float gelen_toplam_kwh = 0.0f;
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
@@ -315,6 +322,8 @@ static void MX_GPIO_Init(void)
 }
 
 /* USER CODE BEGIN 4 */
+
+
 void HAL_FDCAN_RxFifo0Callback(FDCAN_HandleTypeDef *hfdcan, uint32_t RxFifo0ITs)
 {
     if ((RxFifo0ITs & FDCAN_IT_RX_FIFO0_NEW_MESSAGE) != 0U)
@@ -324,13 +333,11 @@ void HAL_FDCAN_RxFifo0Callback(FDCAN_HandleTypeDef *hfdcan, uint32_t RxFifo0ITs)
             // --- MESAJ 1: HIZ, GÜÇ VE TÜKETİM (ID: 0x101) ---
             if (RxHeader.Identifier == 0x101)
             {
-                gelen_hiz = RxData[0]; // Byte 0: Hız (Tam sayı)
+                gelen_hiz = RxData[0];
 
-                // Güç: 2 byte birleştir ve 10'a böl (Hassasiyet için F4'te 10 ile çarpmıştık)
                 int16_t guc_raw = (int16_t)(RxData[2] << 8 | RxData[1]);
                 gelen_anlik_kw = guc_raw / 10.0f;
 
-                // Tüketim: 2 byte birleştir ve 10'a böl
                 uint16_t tuketim_raw = (uint16_t)(RxData[4] << 8 | RxData[3]);
                 gelen_tuketim_100km = tuketim_raw / 10.0f;
             }
@@ -338,26 +345,68 @@ void HAL_FDCAN_RxFifo0Callback(FDCAN_HandleTypeDef *hfdcan, uint32_t RxFifo0ITs)
             // --- MESAJ 2: BATARYA, MENZİL VE TOPLAM ENERJİ (ID: 0x102) ---
             else if (RxHeader.Identifier == 0x102)
             {
-                gelen_batarya_yuzde = RxData[0]; // Byte 0: Batarya %
+                gelen_batarya_yuzde = RxData[0];
 
-                // Menzil: 2 byte birleştir (Tam sayı km)
                 uint16_t menzil_raw = (uint16_t)(RxData[2] << 8 | RxData[1]);
                 gelen_menzil_km = (float)menzil_raw;
 
-                // Toplam Enerji (Trip): 2 byte birleştir ve 100'e böl (0.22 kWh gibi hassas değer için)
                 uint16_t trip_raw = (uint16_t)(RxData[4] << 8 | RxData[3]);
                 gelen_toplam_kwh = trip_raw / 100.0f;
             }
 
             // --- UART ÜZERİNDEN PC'YE (QT'YE) GÖNDERİM ---
-            // Gelen verinin uzunluğuna göre tüm paketi UART üzerinden bilgisayara basıyoruz.
-            // RxHeader.DataLength değeri FDCAN paketindeki byte sayısını belirtir.
+            // Senin çalışan versiyonundaki gibi direkt RxData'yı basıyoruz
             HAL_UART_Transmit(&huart2, RxData, 8, 10);
 
-            HAL_GPIO_TogglePin(GPIOA, GPIO_PIN_5); // Veri akışı oldukça LED yanıp söner
+            // Veri geldiğini anlamak için LED'i yak-söndür
+            HAL_GPIO_TogglePin(GPIOA, GPIO_PIN_5);
         }
     }
 }
+
+
+
+
+//void HAL_FDCAN_RxFifo0Callback(FDCAN_HandleTypeDef *hfdcan, uint32_t RxFifo0ITs)
+//{
+//    if ((RxFifo0ITs & FDCAN_IT_RX_FIFO0_NEW_MESSAGE) != 0U)
+//    {
+//        if (HAL_FDCAN_GetRxMessage(hfdcan, FDCAN_RX_FIFO0, &RxHeader, RxData) == HAL_OK)
+//        {
+//            // 1. ADIM: Verileri Nucleo hafızasında güncelle (Live Expressions için)
+//            if (RxHeader.Identifier == 0x101)
+//            {
+//                gelen_hiz = RxData[0];
+//                int16_t guc_raw = (int16_t)(RxData[2] << 8 | RxData[1]);
+//                gelen_anlik_kw = guc_raw / 10.0f;
+//                uint16_t tuk_raw = (uint16_t)(RxData[4] << 8 | RxData[3]);
+//                gelen_tuketim_100km = tuk_raw / 10.0f;
+//            }
+//            else if (RxHeader.Identifier == 0x102)
+//            {
+//                gelen_batarya_yuzde = RxData[0];
+//                uint16_t men_raw = (uint16_t)(RxData[2] << 8 | RxData[1]);
+//                gelen_menzil_km = (float)men_raw;
+//                uint16_t trip_raw = (uint16_t)(RxData[4] << 8 | RxData[3]);
+//                gelen_toplam_kwh = trip_raw / 100.0f;
+//            }
+//
+//            // 2. ADIM: Qt'ye Gönderim (KRİTİK NOKTA)
+//            // Qt'nin hangi verinin ne olduğunu anlaması için paket başına ID ekliyoruz.
+//            uint8_t uart_paketi[9];
+//            uart_paketi[0] = (uint8_t)(RxHeader.Identifier & 0xFF); // ID'nin son hanesi (0x01 veya 0x02)
+//
+//            for(int i=0; i<8; i++) {
+//                uart_paketi[i+1] = RxData[i]; // Kalan 8 byte veriyi ekle
+//            }
+//
+//            // Qt'ye toplam 9 byte gönderiyoruz: [ID] [D0] [D1] [D2] [D3] [D4] [D5] [D6] [D7]
+//            HAL_UART_Transmit(&huart2, uart_paketi, 9, 10);
+//
+//            HAL_GPIO_TogglePin(GPIOA, GPIO_PIN_5);
+//        }
+//    }
+//}
 /* USER CODE END 4 */
 
 /**
