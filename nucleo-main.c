@@ -30,6 +30,7 @@
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
 #include <stdio.h>
+#include "string.h"
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -324,46 +325,37 @@ static void MX_GPIO_Init(void)
 /* USER CODE BEGIN 4 */
 
 
+/* CAN Mesaj Alım Callback Fonksiyonu */
 void HAL_FDCAN_RxFifo0Callback(FDCAN_HandleTypeDef *hfdcan, uint32_t RxFifo0ITs)
 {
-    if ((RxFifo0ITs & FDCAN_IT_RX_FIFO0_NEW_MESSAGE) != 0U)
+    if ((RxFifo0ITs & FDCAN_IT_RX_FIFO0_NEW_MESSAGE) != RESET)
     {
+        /* 1. CAN Hattından Gelen Veriyi Oku */
         if (HAL_FDCAN_GetRxMessage(hfdcan, FDCAN_RX_FIFO0, &RxHeader, RxData) == HAL_OK)
         {
-            // --- MESAJ 1: HIZ, GÜÇ VE TÜKETİM (ID: 0x101) ---
-            if (RxHeader.Identifier == 0x101)
-            {
-                gelen_hiz = RxData[0];
+            /* --- BURADAN İTİBAREN SENİN KODLARIN BAŞLIYOR --- */
 
-                int16_t guc_raw = (int16_t)(RxData[2] << 8 | RxData[1]);
-                gelen_anlik_kw = guc_raw / 10.0f;
+            uint8_t uart_paket[11];
+            uart_paket[0] = 0xAA;   // Başlangıç Byte (Header)
 
-                uint16_t tuketim_raw = (uint16_t)(RxData[4] << 8 | RxData[3]);
-                gelen_tuketim_100km = tuketim_raw / 10.0f;
-            }
+            // CAN ID'sine göre paket tipini belirle (Hız mı, Batarya mı?)
+            uart_paket[1] = (RxHeader.Identifier == 0x101) ? 1 : 2;
 
-            // --- MESAJ 2: BATARYA, MENZİL VE TOPLAM ENERJİ (ID: 0x102) ---
-            else if (RxHeader.Identifier == 0x102)
-            {
-                gelen_batarya_yuzde = RxData[0];
+            // 8 Byte'lık CAN verisini paketin ortasına kopyala
+            memcpy(&uart_paket[2], RxData, 8);
 
-                uint16_t menzil_raw = (uint16_t)(RxData[2] << 8 | RxData[1]);
-                gelen_menzil_km = (float)menzil_raw;
+            uart_paket[10] = 0x55;  // Bitiş Byte (Footer)
 
-                uint16_t trip_raw = (uint16_t)(RxData[4] << 8 | RxData[3]);
-                gelen_toplam_kwh = trip_raw / 100.0f;
-            }
+            /* 2. Hazırlanan 11 Byte'lık Paketi Bilgisayara (Qt) Gönder */
+            HAL_UART_Transmit(&huart2, uart_paket, 11, 10);
 
-            // --- UART ÜZERİNDEN PC'YE (QT'YE) GÖNDERİM ---
-            // Senin çalışan versiyonundaki gibi direkt RxData'yı basıyoruz
-            HAL_UART_Transmit(&huart2, RxData, 8, 10);
+            /* --- KODLARIN BURADA BİTTİ --- */
 
-            // Veri geldiğini anlamak için LED'i yak-söndür
+            // Görsel geri bildirim için LED'i yak/söndür
             HAL_GPIO_TogglePin(GPIOA, GPIO_PIN_5);
         }
     }
 }
-
 
 
 
