@@ -1,2 +1,1 @@
-***ACS712 bağlantısı eklenecek***
-<img width="1674" height="972" alt="şema_son" src="https://github.com/user-attachments/assets/969f3e14-4861-45c9-8b38-2cc639897ef9" />
+<img width="1710" height="1118" alt="şema_son2" src="https://github.com/user-attachments/assets/2a99b206-3e54-4a60-b5cc-96d88e928c07" />
