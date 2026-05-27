@@ -40,8 +40,7 @@ public:
     QString kwDisplay() const { return QString::number(m_kw, 'f', 1) + " kW"; }
     QString menzilDisplay() const { return QString::number(m_menzil) + " km"; }
     QString tuketimDisplay() const {
-        return QString::number(m_tuketim, 'f', 1);
-    }
+        return QString::number(m_tuketim, 'f', 1) + " kWh"; }
 
 private slots:
     void readData(); // Seri porttan veri geldikçe çalışır
