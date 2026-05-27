@@ -26,11 +26,10 @@
 /* USER CODE END Header */
 /* Includes ------------------------------------------------------------------*/
 #include "main.h"
-
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
-#include <stdio.h>
-#include <stdlib.h>  // Bunu eklemezsen rand() çalışmaz
+#include "stdio.h"
+#include "stdlib.h"
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -49,75 +48,76 @@
 /* USER CODE END PM */
 
 /* Private variables ---------------------------------------------------------*/
+
 ADC_HandleTypeDef hadc1;
 ADC_HandleTypeDef hadc2;
 ADC_HandleTypeDef hadc3;
-
 CAN_HandleTypeDef hcan1;
-
 TIM_HandleTypeDef htim3;
 TIM_HandleTypeDef htim4;
 
 /* USER CODE BEGIN PV */
 CAN_TxHeaderTypeDef TxHeader;
-uint8_t  TxData[8] = {0}; // Test verisi
-uint32_t TxMailbox = 0U;
-volatile uint32_t adc_val = 0;   // Debug için global yaptık
-volatile int16_t gaz_degeri = 0;
-volatile uint32_t motor_puls_sayaci = 0;
-int      ppr = 11; // Motorunun PPR değerini buraya yaz
-int      reduksiyon = 10; // Dişli oranını buraya yaz
-float    tekerlek_cevre = 1.88; // 60cm çap için metre cinsinden
-float    gercek_fiziksel_hiz = 0; // Motorun gerçekteki hızı (78 km/h olan)
-float    kalibre_edilen_hiz = 0;   // Ekranda görünecek olan (220 km/h olan)
-uint32_t adc_degeri_akim;        // ADC'den gelen ham sayı için
-float okunan_voltaj;             // PA1'deki 0-3.3V arası değer için
-float gercek_sensor_voltaji;     // 2 ile çarpılmış hali için
-float amper;                     // Sonuç olan Amper değeri için
-float anlik_amper;   // Bu Live Watch'ta zıplamasını izleyeceğin ham olan (YENİ!)
 
-int PRND_val;
+uint8_t   TxData[8]                   = {0};      // Test verisi
+uint32_t  TxMailbox                   = 0U;
 
-// Sabit çarpanımız (78.04'ü 220'ye tamamlayan sihirli sayı)
-const float kalibrasyon_katsayisi = 2.819f;
+uint8_t   mode                        = 1;        // Başlangıç modumuz 1 olsun
+uint8_t   son_durum                   = 0;
+uint32_t  motor_puls_sayaci           = 0;
 
-int tam_sayi_kalibre_hiz = 0; // Ekrana basılacak temiz tam sayı
+/* --- ZAMANLAMA --- */
+uint32_t  son_zaman                   = 0;        // 1000ms sayacı için
+uint32_t  su_anki_zaman               = 0;        // HAL_GetTick() değerini tutmak için
 
+volatile  uint32_t adc_val            = 0;        // Debug için global yaptık
+volatile  uint32_t motor_puls_sayaci  = 0;
+volatile  uint32_t last_capture = 0;
+volatile  uint32_t pulse_period = 0;
+volatile  int16_t  gaz_degeri         = 0;
+volatile  float motor_rpm = 0;
+
+
+const     float kalibrasyon_katsayisi = 2.819f;   // Sabit çarpanımız (78.04'ü 220'ye tamamlayan sihirli sayı)
+
+int       ppr                         = 11;       // Motorunun PPR değerini buraya yaz
+int       reduksiyon                  = 10;       // Dişli oranını buraya yaz
+int       tam_sayi_kalibre_hiz        = 0;        // Ekrana basılacak temiz tam sayı
+int       PRND_val;
+
+float     tekerlek_cevre              = 1.88;     // 60cm çap için metre cinsinden
+float     gercek_fiziksel_hiz         = 0;        // Motorun gerçekteki hızı (78 km/h olan)
+float     kalibre_edilen_hiz          = 0;        // Ekranda görünecek olan (220 km/h olan)
+float     okunan_voltaj;                          // PA1'deki 0-3.3V arası değer için
+float     gercek_sensor_voltaji;                  // 2 ile çarpılmış hali için
+float     amper;                                  // Sonuç olan Amper değeri için
+float     anlik_amper;                            // Bu Live Watch'ta zıplamasını izleyeceğin ham olan (YENİ!)
 
 /* --- YENİ EKLENECEK GÜÇ VE ENERJİ DEĞİŞKENLERİ --- */
 
-float pil_voltaji = 12.0f;       // Aracın ana batarya voltajı (Simülasyon için)
-float anlik_watt = 0.0f;         // P = V * I (Anlık Güç)
-float anlik_kw = 0.0f;           // Dashboard'daki küçük kW yazısı için
-float sanal_kw = 0.0f;           // Dashboard'daki büyük 15 kW gibi rakamlar için (Gerekirse)
-
-float toplam_harcanan_wh = 0.0f; // Zamanla biriken enerji (Watt-saat)
-float toplam_kwh = 0.0f;         // Yeşil rakam (18.5 kWh) için toplam enerji
-
-float verimlilik = 0.0f;         // kWh / 100km göstergesi için
-
-/* --- ZAMANLAMA --- */
-uint32_t son_zaman = 0;          // 1000ms sayacı için
-uint32_t su_anki_zaman = 0;      // HAL_GetTick() değerini tutmak için
-
-float toplam_batarya_kapasitesi = 75.0f; // kWh (Togg/Tesla referansımız)
-float kalan_batarya_kwh = 0.0f;          // O an pilde kalan enerji
-float batarya_yuzdesi = 0.0f;           // % (0-100 arası)
-float kalan_menzil_km = 0.0f;           // Kaç km daha gideriz
+float     pil_voltaji                 = 12.0f;    // Aracın ana batarya voltajı (Simülasyon için)
+float     anlik_watt                  = 0.0f;     // P = V * I (Anlık Güç)
+float     anlik_kw                    = 0.0f;     // Dashboard'daki küçük kW yazısı için
+float     sanal_kw                    = 0.0f;     // Dashboard'daki büyük 15 kW gibi rakamlar için (Gerekirse)
+float     toplam_harcanan_wh          = 0.0f;     // Zamanla biriken enerji (Watt-saat)
+float     toplam_kwh                  = 0.0f;     // Yeşil rakam (18.5 kWh) için toplam enerji
+float     verimlilik                  = 0.0f;     // kWh / 100km göstergesi için
+float     toplam_batarya_kapasitesi   = 75.0f;    // kWh (Togg/Tesla referansımız)
+float     kalan_batarya_kwh           = 0.0f;     // O an pilde kalan enerji
+float     batarya_yuzdesi             = 0.0f;     // % (0-100 arası)
+float     kalan_menzil_km             = 0.0f;     // Kaç km daha gideriz
 
 // Dashboard'da Görülecek 3 Ana Veri:
-float anlik_tuketim_100km = 0.0f;  // 3. ANLIK TÜKETİM (100 km'de kaç kWh yakarım?)
-float batarya_yuzdesi_baslangic = 0.0f;
 
-uint8_t mode = 1; // Başlangıç modumuz 1 olsun
+float     anlik_tuketim_100km         = 0.0f;     // 3. ANLIK TÜKETİM (100 km'de kaç kWh yakarım?)
+float     batarya_yuzdesi_baslangic   = 0.0f;
 
-volatile uint32_t last_capture = 0;
-volatile uint32_t pulse_period = 0;
-volatile float motor_rpm = 0;
+
 
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
+
 void SystemClock_Config(void);
 static void MX_GPIO_Init(void);
 static void MX_ADC1_Init(void);
@@ -126,14 +126,19 @@ static void MX_TIM3_Init(void);
 static void MX_ADC2_Init(void);
 static void MX_ADC3_Init(void);
 static void MX_TIM4_Init(void);
+
 /* USER CODE BEGIN PFP */
+
 void Hiz_Hesapla(void);
 void Guc_Hesapla(void);
 void Enerji_Hesapla(void);
+
 /* USER CODE END PFP */
 
 /* Private user code ---------------------------------------------------------*/
 /* USER CODE BEGIN 0 */
+
+// PE9 dan kesme ile encoder sinyal pinini okuma 1                                        ***
 //void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin) {
 //    if(GPIO_Pin == GPIO_PIN_9) { // PE9'dan sinyal gelince
 //        motor_puls_sayaci++;
@@ -143,6 +148,8 @@ void Enerji_Hesapla(void);
 //    }
 //}
 
+
+// PE9 dan kesme ile encoder sinyal pinini okuma 2                                         ***
 //void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin)
 //{
 //    if(GPIO_Pin == GPIO_PIN_9)
@@ -151,7 +158,7 @@ void Enerji_Hesapla(void);
 //    }
 //}
 
-//void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin)
+//void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin)                                           ***
 //{
 //    static uint32_t son_tetiklenme_zamani = 0;
 //    uint32_t simdiki_zaman = HAL_GetTick();
@@ -207,12 +214,10 @@ int main(void)
   MX_ADC3_Init();
   MX_TIM4_Init();
   /* USER CODE BEGIN 2 */
-  // --- 1. Önce Yönü Belirle (PE7 ve PE8) ---
+
   // 1. CAN Hattını Başlat (Ekrana veri gitmesi için şart)
   HAL_CAN_Start(&hcan1);
-  (void)HAL_CAN_Start(&hcan1);
   HAL_TIM_PWM_Start(&htim3, TIM_CHANNEL_1);
-
   //HAL_TIM_Base_Start(&htim4);
 
   /* Mesaj Ayarları: ID: 0x103 (Dashboard bu ID'yi bekliyor) */
@@ -220,18 +225,14 @@ int main(void)
   TxHeader.RTR = CAN_RTR_DATA;
   TxHeader.DLC = 8U; /* 8 byte veri yolluyoruz */
   TxHeader.TransmitGlobalTime = DISABLE;
-  uint32_t son_zaman = 0;
-
+	
   srand(HAL_GetTick());
+	
   batarya_yuzdesi_baslangic = (float)(rand() % 41 + 55); // %55-%95 arası başla
   batarya_yuzdesi = batarya_yuzdesi_baslangic;
   kalan_batarya_kwh = (batarya_yuzdesi * toplam_batarya_kapasitesi) / 100.0f;
   toplam_kwh = 0; // Her resetlendiğinde harcananı sıfırla
-
-
-  //uint8_t son_durum = 0;
- // uint32_t motor_puls_sayaci = 0;
-
+  uint32_t son_zaman = 0;
 
   /* USER CODE END 2 */
 
@@ -242,25 +243,6 @@ int main(void)
     /* USER CODE END WHILE */
 
     /* USER CODE BEGIN 3 */
-
-	  // Register'dan en hızlı okuma yöntemi
-	        uint8_t suanki_durum = (GPIOD->IDR & GPIO_PIN_14) ? 1 : 0;
-	        static uint8_t son_durum = 0;
-	        static uint8_t filtre_sayaci = 0;
-	        const uint8_t esik = 2; // Gürültü filtresi
-
-	        if (suanki_durum == 1) {
-	            if (filtre_sayaci < esik) filtre_sayaci++;
-	        } else {
-	            filtre_sayaci = 0;
-	        }
-
-	        if (filtre_sayaci >= esik && son_durum == 0) {
-	            motor_puls_sayaci++;
-	            son_durum = 1;
-	        } else if (suanki_durum == 0) {
-	            son_durum = 0;
-	        }
 
 	  // Donanımsal sayacı başlatır
 //	  if (HAL_GPIO_ReadPin(BTN1_GPIO_Port, BTN1_Pin) == GPIO_PIN_RESET)
@@ -414,7 +396,8 @@ int main(void)
 	  	        }
 	  	    }
 	  	    HAL_ADC_Stop(&hadc2);
-	  	      /* --- ADIM 2: MOTOR SÜRÜCÜ KONTROLÜ --- */
+	  
+	  	      /* --- ADIM 2: MOTOR SÜRÜCÜ KONTROLÜ --- */                                       ***
 //	  	      if (gaz_degeri < 5)
 //	  	      {
 //	  	          HAL_GPIO_WritePin(GPIOE, GPIO_PIN_7, GPIO_PIN_RESET);
@@ -453,8 +436,6 @@ int main(void)
 
 	  	      __HAL_TIM_SET_COMPARE(&htim3, TIM_CHANNEL_1, pwm_cikisi);
 	  	  }
-
-
 
 	  	    /* --- ADIM 3: CAN BUS HABERLEŞMESİ (Her 500ms'de bir) --- */
 	  	    static uint32_t can_zaman = 0;
