@@ -72,8 +72,8 @@ uint32_t  su_anki_zaman               = 0;        // HAL_GetTick() değerini tut
 
 volatile  uint32_t adc_val            = 0;        // Debug için global yaptık
 volatile  uint32_t motor_puls_sayaci  = 0;
-volatile  uint32_t last_capture = 0;
-volatile  uint32_t pulse_period = 0;
+volatile  uint32_t last_capture       = 0;
+volatile  uint32_t pulse_period       = 0;
 volatile  int16_t  gaz_degeri         = 0;
 volatile  float motor_rpm = 0;
 
@@ -112,8 +112,6 @@ float     kalan_menzil_km             = 0.0f;     // Kaç km daha gideriz
 float     anlik_tuketim_100km         = 0.0f;     // 3. ANLIK TÜKETİM (100 km'de kaç kWh yakarım?)
 float     batarya_yuzdesi_baslangic   = 0.0f;
 
-
-
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
@@ -138,7 +136,8 @@ void Enerji_Hesapla(void);
 /* Private user code ---------------------------------------------------------*/
 /* USER CODE BEGIN 0 */
 
-// PE9 dan kesme ile encoder sinyal pinini okuma 1                                        ***
+// PE9 dan kesme ile encoder sinyal pinini okuma (ver1)                                       ***
+
 //void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin) {
 //    if(GPIO_Pin == GPIO_PIN_9) { // PE9'dan sinyal gelince
 //        motor_puls_sayaci++;
@@ -149,7 +148,8 @@ void Enerji_Hesapla(void);
 //}
 
 
-// PE9 dan kesme ile encoder sinyal pinini okuma 2                                         ***
+// PE9 dan kesme ile encoder sinyal pinini okuma (ver2)                                        ***
+
 //void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin)
 //{
 //    if(GPIO_Pin == GPIO_PIN_9)
@@ -158,7 +158,9 @@ void Enerji_Hesapla(void);
 //    }
 //}
 
-//void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin)                                           ***
+// PE9 dan kesme ile encoder sinyal pinini okuma (ver3)                                         ***
+
+//void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin)                                           
 //{
 //    static uint32_t son_tetiklenme_zamani = 0;
 //    uint32_t simdiki_zaman = HAL_GetTick();
@@ -174,7 +176,6 @@ void Enerji_Hesapla(void);
 //        }
 //    }
 //}
-
 
 /* USER CODE END 0 */
 
@@ -216,6 +217,7 @@ int main(void)
   /* USER CODE BEGIN 2 */
 
   // 1. CAN Hattını Başlat (Ekrana veri gitmesi için şart)
+	
   HAL_CAN_Start(&hcan1);
   HAL_TIM_PWM_Start(&htim3, TIM_CHANNEL_1);
   //HAL_TIM_Base_Start(&htim4);
@@ -243,8 +245,9 @@ int main(void)
     /* USER CODE END WHILE */
 
     /* USER CODE BEGIN 3 */
-
-	  // Donanımsal sayacı başlatır
+	  
+// DRIVE MOD BUTONU
+	  
 //	  if (HAL_GPIO_ReadPin(BTN1_GPIO_Port, BTN1_Pin) == GPIO_PIN_RESET)
 //	      {
 //	          HAL_Delay(50); // Buton arkını (debounce) engellemek için bekle
@@ -262,10 +265,9 @@ int main(void)
 //	              while (HAL_GPIO_ReadPin(BTN1_GPIO_Port, BTN1_Pin) == GPIO_PIN_RESET);
 //	          }
 //	      }
-//
-//	      // =================================================================
-//	      // 2. ADIM: SWITCH-CASE İLE MODLARIN KONTROLÜ
-//	      // =================================================================
+	      // =================================================================
+	      // 2. ADIM: SWITCH-CASE İLE MODLARIN KONTROLÜ
+	      // =================================================================
 //	      switch (mode)
 //	      {
 //	          case 1:
@@ -285,8 +287,10 @@ int main(void)
 //	              mode = 1;
 //	              break;
 //	      }
-//
-//
+
+	  
+	      // SOL SİNYAL (BTN2)	  
+	  
 //	      if (HAL_GPIO_ReadPin(BTN2_GPIO_Port, BTN2_Pin) == GPIO_PIN_RESET)
 //	      {
 //	          HAL_GPIO_WritePin(SOL_SINYAL_GPIO_Port, SOL_SINYAL_Pin, GPIO_PIN_SET);
@@ -295,8 +299,10 @@ int main(void)
 //	      {
 //	          HAL_GPIO_WritePin(SOL_SINYAL_GPIO_Port, SOL_SINYAL_Pin, GPIO_PIN_RESET);
 //	      }
-//
-//	      // SAĞ SİNYAL (BTN3)
+
+	  
+	      // SAĞ SİNYAL (BTN3)
+	  
 //	      if (HAL_GPIO_ReadPin(BTN3_GPIO_Port, BTN3_Pin) == GPIO_PIN_RESET)
 //	      {
 //	          HAL_GPIO_WritePin(SAG_SINYAL_GPIO_Port, SAG_SINYAL_Pin, GPIO_PIN_SET);
@@ -305,37 +311,33 @@ int main(void)
 //	      {
 //	          HAL_GPIO_WritePin(SAG_SINYAL_GPIO_Port, SAG_SINYAL_Pin, GPIO_PIN_RESET);
 //	      }
-//
-////	      // DÖRTLÜLER (BTN4)
-////	      if (HAL_GPIO_ReadPin(BTN4_GPIO_Port, BTN4_Pin) == GPIO_PIN_RESET)
-////	      {
-////	          HAL_GPIO_WritePin(DORTLU_GPIO_Port, DORTLU_Pin, GPIO_PIN_SET);
-////	      }
-////	      else
-////	      {
-////	          HAL_GPIO_WritePin(DORTLU_GPIO_Port, DORTLU_Pin, GPIO_PIN_RESET);
-////	      }
-//
-//
-//	      // DÖRTLÜLER (BTN4) - KAPANMA GECİKMESİ ÇÖZÜMÜ
-//	      	      if (HAL_GPIO_ReadPin(BTN4_GPIO_Port, BTN4_Pin) == GPIO_PIN_RESET)
-//	      	      {
-//	      	          // Butona basıldığı an LED hiç beklemeden ŞAK diye yanar
-//	      	          HAL_GPIO_WritePin(DORTLU_GPIO_Port, DORTLU_Pin, GPIO_PIN_SET);
-//	      	      }
-//	      	      else
-//	      	      {
-//	      	          // Buton kapatılmaya çalışıldığında (GND'den ayrılırken)
-//	      	          // Mekanik kararsızlığı aşmak için işlemciyi 80 ms bekletiyoruz
-//	      	          HAL_Delay(80);
-//
-//	      	          // 80 ms sonra hala bırakılmış durumdaysa LED'i kesin olarak söndür
-//	      	          if (HAL_GPIO_ReadPin(BTN4_GPIO_Port, BTN4_Pin) == GPIO_PIN_SET)
-//	      	          {
-//	      	              HAL_GPIO_WritePin(DORTLU_GPIO_Port, DORTLU_Pin, GPIO_PIN_RESET);
-//	      	          }
-//	      	      }
-//
+
+	      // DÖRTLÜLER (BTN4) --------------------------------------------------------
+//	      if (HAL_GPIO_ReadPin(BTN4_GPIO_Port, BTN4_Pin) == GPIO_PIN_RESET)
+//	      {
+//	          HAL_GPIO_WritePin(DORTLU_GPIO_Port, DORTLU_Pin, GPIO_PIN_SET);
+//	      }
+//	      else
+//	      {
+//	          HAL_GPIO_WritePin(DORTLU_GPIO_Port, DORTLU_Pin, GPIO_PIN_RESET);
+//	      }
+//        DÖRTLÜLER (BTN4) - KAPANMA GECİKMESİ ÇÖZÜMÜ
+//	      if (HAL_GPIO_ReadPin(BTN4_GPIO_Port, BTN4_Pin) == GPIO_PIN_RESET)
+//	      {    	        
+//	      	  HAL_GPIO_WritePin(DORTLU_GPIO_Port, DORTLU_Pin, GPIO_PIN_SET); // Butona basıldığı an LED hiç beklemeden ŞAK diye yanar
+//	      }
+//	      else
+//	      {
+//	      Buton kapatılmaya çalışıldığında (GND'den ayrılırken)
+//	      Mekanik kararsızlığı aşmak için işlemciyi 80 ms bekletiyoruz
+//	      HAL_Delay(80);
+//	      // 80 ms sonra hala bırakılmış durumdaysa LED'i kesin olarak söndür
+//	      if (HAL_GPIO_ReadPin(BTN4_GPIO_Port, BTN4_Pin) == GPIO_PIN_SET)
+//	      {
+//	      	  HAL_GPIO_WritePin(DORTLU_GPIO_Port, DORTLU_Pin, GPIO_PIN_RESET);
+//	      }
+//	      }
+	  
 //	      // FARLAR (BTN5)
 //	      if (HAL_GPIO_ReadPin(BTN5_GPIO_Port, BTN5_Pin) == GPIO_PIN_RESET)
 //	      {
@@ -345,8 +347,7 @@ int main(void)
 //	      {
 //	          HAL_GPIO_WritePin(FARLAR_GPIO_Port, FARLAR_Pin, GPIO_PIN_RESET);
 //	      }
-
-
+	  
       /* --- ZAMANLAYICI KONTROLLERİ --- */
 	  uint32_t su_anki_zaman = HAL_GetTick();
 
@@ -397,7 +398,7 @@ int main(void)
 	  	    }
 	  	    HAL_ADC_Stop(&hadc2);
 	  
-	  	      /* --- ADIM 2: MOTOR SÜRÜCÜ KONTROLÜ --- */                                       ***
+	  	      /* --- ADIM 2: MOTOR SÜRÜCÜ KONTROLÜ --- */                                       
 //	  	      if (gaz_degeri < 5)
 //	  	      {
 //	  	          HAL_GPIO_WritePin(GPIOE, GPIO_PIN_7, GPIO_PIN_RESET);
@@ -410,9 +411,10 @@ int main(void)
 //	  	          HAL_GPIO_WritePin(GPIOE, GPIO_PIN_8, GPIO_PIN_RESET);
 //	  	          __HAL_TIM_SET_COMPARE(&htim3, TIM_CHANNEL_1, gaz_degeri);
 //	  	      }
-
-	  	  // Önce potansiyometreden değeri oku (senin kodunda bu zaten vardır)
-	  	  // gaz_degeri = ADC_oku();
+// Önce potansiyometreden değeri oku (senin kodunda bu zaten vardır)
+// gaz_degeri = ADC_oku();
+	
+// ///	  // potu çevirince hızı ayarlıyoruz ama ölü bölgeyi ayırarak
 
 	  	  if (gaz_degeri < 5)
 	  	  {
@@ -427,13 +429,10 @@ int main(void)
 	  	      HAL_GPIO_WritePin(GPIOE, GPIO_PIN_7, GPIO_PIN_SET);
 	  	      HAL_GPIO_WritePin(GPIOE, GPIO_PIN_8, GPIO_PIN_RESET);
 
-	  	      // Motorun "vınlamadan" dönmeye başladığı en düşük sınır
-	  	      uint8_t min_calisma = 50;
-
+	  	      uint8_t min_calisma = 50; 	  	                         // Motorun "vınlamadan" dönmeye başladığı en düşük sınır
 	  	      // 0-100 aralığını 70-100 arasına yayıyoruz (Mapping)
 	  	      // Bu sayede potu çevirdiğinde motor vınlamadan tık diye döner
 	  	      uint8_t pwm_cikisi = min_calisma + ((gaz_degeri * (100 - min_calisma)) / 100);
-
 	  	      __HAL_TIM_SET_COMPARE(&htim3, TIM_CHANNEL_1, pwm_cikisi);
 	  	  }
 
@@ -917,36 +916,6 @@ static void MX_GPIO_Init(void)
 
 /* USER CODE BEGIN 4 */
 
-void HAL_TIM_IC_CaptureCallback(TIM_HandleTypeDef *htim)
-{
-    if(htim->Instance == TIM4)
-    {
-        uint32_t now = HAL_TIM_ReadCapturedValue(htim, TIM_CHANNEL_1);
-
-        if(last_capture != 0)
-        {
-            if(now >= last_capture)
-                pulse_period = now - last_capture;
-            else
-                pulse_period = (0xFFFF - last_capture) + now;
-
-            if(pulse_period > 0)
-            {
-                float freq = 1000000.0f / pulse_period;
-
-                // pulses_per_rev = senin sistem:
-                float pulses_per_rev = (float)(ppr * reduksiyon);
-
-                motor_rpm = (freq / pulses_per_rev) * 60.0f;
-            }
-        }
-
-        last_capture = now;
-    }
-}
-
-
-
 void Hiz_Hesapla() {
     // 1. Önceki hesaplamaların aynen kalsın
     float rps = (float)motor_puls_sayaci / (ppr * reduksiyon);
@@ -1013,7 +982,6 @@ void Hiz_Hesapla() {
 //    }
 //}
 
-
 void Guc_Hesapla() {
     // 1. ANLIK GÜÇ HESABI (Power - kW)
     if (amper > 0.02f) { // Gaza basılıyorsa
@@ -1030,7 +998,6 @@ void Guc_Hesapla() {
         anlik_kw = 0.0f; // Ayak gazdan çekildi (Süzülme)
     }
 }
-
 
 void Enerji_Hesapla() {
     // 2. TOPLAM ENERJİ HESABI (Trip Energy - kWh)
@@ -1057,6 +1024,33 @@ void Enerji_Hesapla() {
         anlik_tuketim_100km = 0.0f;
         // Dururken ortalama verimlilik (15 kWh/100km) üzerinden menzil tahmini yapılır
         kalan_menzil_km = (kalan_batarya_kwh / 15.0f) * 100.0f;
+    }
+}
+
+//void HAL_TIM_IC_CaptureCallback(TIM_HandleTypeDef *htim)
+//{
+//    if(htim->Instance == TIM4)
+//    {
+//        uint32_t now = HAL_TIM_ReadCapturedValue(htim, TIM_CHANNEL_1);
+//
+//        if(last_capture != 0)
+//        {
+//            if(now >= last_capture)
+//                pulse_period = now - last_capture;
+//            else
+//                pulse_period = (0xFFFF - last_capture) + now;
+//
+//            if(pulse_period > 0)
+//            {
+//                float freq = 1000000.0f / pulse_period;
+//
+//                // pulses_per_rev = senin sistem:
+//                float pulses_per_rev = (float)(ppr * reduksiyon);
+//
+//                motor_rpm = (freq / pulses_per_rev) * 60.0f;
+//            }
+//        }
+        last_capture = now;
     }
 }
 
