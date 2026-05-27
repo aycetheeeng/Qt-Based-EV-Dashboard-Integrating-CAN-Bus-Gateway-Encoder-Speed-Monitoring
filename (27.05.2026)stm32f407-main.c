@@ -160,7 +160,7 @@ void Enerji_Hesapla(void);
 
 // PE9 dan kesme ile encoder sinyal pinini okuma (ver3)                                         ***
 
-//void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin)                                           
+//void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin)
 //{
 //    static uint32_t son_tetiklenme_zamani = 0;
 //    uint32_t simdiki_zaman = HAL_GetTick();
@@ -217,7 +217,7 @@ int main(void)
   /* USER CODE BEGIN 2 */
 
   // 1. CAN Hattını Başlat (Ekrana veri gitmesi için şart)
-	
+
   HAL_CAN_Start(&hcan1);
   HAL_TIM_PWM_Start(&htim3, TIM_CHANNEL_1);
   //HAL_TIM_Base_Start(&htim4);
@@ -227,9 +227,9 @@ int main(void)
   TxHeader.RTR = CAN_RTR_DATA;
   TxHeader.DLC = 8U; /* 8 byte veri yolluyoruz */
   TxHeader.TransmitGlobalTime = DISABLE;
-	
+
   srand(HAL_GetTick());
-	
+
   batarya_yuzdesi_baslangic = (float)(rand() % 41 + 55); // %55-%95 arası başla
   batarya_yuzdesi = batarya_yuzdesi_baslangic;
   kalan_batarya_kwh = (batarya_yuzdesi * toplam_batarya_kapasitesi) / 100.0f;
@@ -245,109 +245,109 @@ int main(void)
     /* USER CODE END WHILE */
 
     /* USER CODE BEGIN 3 */
-	  
+
 // DRIVE MOD BUTONU
-	  
-//	  if (HAL_GPIO_ReadPin(BTN1_GPIO_Port, BTN1_Pin) == GPIO_PIN_RESET)
-//	      {
-//	          HAL_Delay(50); // Buton arkını (debounce) engellemek için bekle
-//
-//	          if (HAL_GPIO_ReadPin(BTN1_GPIO_Port, BTN1_Pin) == GPIO_PIN_RESET)
-//	          {
-//	              mode++; // Modu 1 artır (1'di 2 oldu, 2'ydi 3 oldu...)
-//
-//	              if (mode > 3)
-//	              {
-//	                  mode = 1; // 4. basışta (veya 3'ü geçince) tekrar başa, yani 1'e dön
-//	              }
-//
-//	              // Kullanıcı elini butondan çekene kadar burada bekle (Sonsuz artışı önler)
-//	              while (HAL_GPIO_ReadPin(BTN1_GPIO_Port, BTN1_Pin) == GPIO_PIN_RESET);
-//	          }
-//	      }
+
+	  if (HAL_GPIO_ReadPin(BTN1_GPIO_Port, BTN1_Pin) == GPIO_PIN_RESET)
+	      {
+	          HAL_Delay(50); // Buton arkını (debounce) engellemek için bekle
+
+	          if (HAL_GPIO_ReadPin(BTN1_GPIO_Port, BTN1_Pin) == GPIO_PIN_RESET)
+	          {
+	              mode++; // Modu 1 artır (1'di 2 oldu, 2'ydi 3 oldu...)
+
+	              if (mode > 3)
+	              {
+	                  mode = 1; // 4. basışta (veya 3'ü geçince) tekrar başa, yani 1'e dön
+	              }
+
+	              // Kullanıcı elini butondan çekene kadar burada bekle (Sonsuz artışı önler)
+	              while (HAL_GPIO_ReadPin(BTN1_GPIO_Port, BTN1_Pin) == GPIO_PIN_RESET);
+	          }
+	      }
 	      // =================================================================
 	      // 2. ADIM: SWITCH-CASE İLE MODLARIN KONTROLÜ
 	      // =================================================================
-//	      switch (mode)
-//	      {
-//	          case 1:
-//	              // Mod 1 iken ne yapılmasını istiyorsan buraya yaz (Örn: Ekrana/Live Expressions'a 1 yazmak veya bir LED yakmak)
-//	              // __NOP(); // Şimdilik boş kalmasın diye işlemciye boş geç komutu
-//	              break;
-//
-//	          case 2:
-//	              // Mod 2 iken yapılacaklar
-//	              break;
-//
-//	          case 3:
-//	              // Mod 3 iken yapılacaklar
-//	              break;
-//
-//	          default:
-//	              mode = 1;
-//	              break;
-//	      }
+	      switch (mode)
+	      {
+	          case 1:
+	              // Mod 1 iken ne yapılmasını istiyorsan buraya yaz (Örn: Ekrana/Live Expressions'a 1 yazmak veya bir LED yakmak)
+	              // __NOP(); // Şimdilik boş kalmasın diye işlemciye boş geç komutu
+	              break;
 
-	  
-	      // SOL SİNYAL (BTN2)	  
-	  
-//	      if (HAL_GPIO_ReadPin(BTN2_GPIO_Port, BTN2_Pin) == GPIO_PIN_RESET)
-//	      {
-//	          HAL_GPIO_WritePin(SOL_SINYAL_GPIO_Port, SOL_SINYAL_Pin, GPIO_PIN_SET);
-//	      }
-//	      else // Butona basılmıyorsa (yani SET ise) LED'i söndür!
-//	      {
-//	          HAL_GPIO_WritePin(SOL_SINYAL_GPIO_Port, SOL_SINYAL_Pin, GPIO_PIN_RESET);
-//	      }
+	          case 2:
+	              // Mod 2 iken yapılacaklar
+	              break;
 
-	  
+	          case 3:
+	              // Mod 3 iken yapılacaklar
+	              break;
+
+	          default:
+	              mode = 1;
+	              break;
+	      }
+
+
+	      // SOL SİNYAL (BTN2)
+
+	      if (HAL_GPIO_ReadPin(BTN2_GPIO_Port, BTN2_Pin) == GPIO_PIN_RESET)
+	      {
+	          HAL_GPIO_WritePin(SOL_SINYAL_GPIO_Port, SOL_SINYAL_Pin, GPIO_PIN_SET);
+	      }
+	      else // Butona basılmıyorsa (yani SET ise) LED'i söndür!
+	      {
+	          HAL_GPIO_WritePin(SOL_SINYAL_GPIO_Port, SOL_SINYAL_Pin, GPIO_PIN_RESET);
+	      }
+
+
 	      // SAĞ SİNYAL (BTN3)
-	  
-//	      if (HAL_GPIO_ReadPin(BTN3_GPIO_Port, BTN3_Pin) == GPIO_PIN_RESET)
-//	      {
-//	          HAL_GPIO_WritePin(SAG_SINYAL_GPIO_Port, SAG_SINYAL_Pin, GPIO_PIN_SET);
-//	      }
-//	      else
-//	      {
-//	          HAL_GPIO_WritePin(SAG_SINYAL_GPIO_Port, SAG_SINYAL_Pin, GPIO_PIN_RESET);
-//	      }
+
+	      if (HAL_GPIO_ReadPin(BTN3_GPIO_Port, BTN3_Pin) == GPIO_PIN_RESET)
+	      {
+	          HAL_GPIO_WritePin(SAG_SINYAL_GPIO_Port, SAG_SINYAL_Pin, GPIO_PIN_SET);
+	      }
+	      else
+	      {
+	          HAL_GPIO_WritePin(SAG_SINYAL_GPIO_Port, SAG_SINYAL_Pin, GPIO_PIN_RESET);
+	      }
 
 	      // DÖRTLÜLER (BTN4) --------------------------------------------------------
-//	      if (HAL_GPIO_ReadPin(BTN4_GPIO_Port, BTN4_Pin) == GPIO_PIN_RESET)
-//	      {
-//	          HAL_GPIO_WritePin(DORTLU_GPIO_Port, DORTLU_Pin, GPIO_PIN_SET);
-//	      }
-//	      else
-//	      {
-//	          HAL_GPIO_WritePin(DORTLU_GPIO_Port, DORTLU_Pin, GPIO_PIN_RESET);
-//	      }
+	      if (HAL_GPIO_ReadPin(BTN4_GPIO_Port, BTN4_Pin) == GPIO_PIN_RESET)
+	      {
+	          HAL_GPIO_WritePin(DORTLU_GPIO_Port, DORTLU_Pin, GPIO_PIN_SET);
+	      }
+	      else
+	      {
+	          HAL_GPIO_WritePin(DORTLU_GPIO_Port, DORTLU_Pin, GPIO_PIN_RESET);
+	      }
 //        DÖRTLÜLER (BTN4) - KAPANMA GECİKMESİ ÇÖZÜMÜ
-//	      if (HAL_GPIO_ReadPin(BTN4_GPIO_Port, BTN4_Pin) == GPIO_PIN_RESET)
-//	      {    	        
-//	      	  HAL_GPIO_WritePin(DORTLU_GPIO_Port, DORTLU_Pin, GPIO_PIN_SET); // Butona basıldığı an LED hiç beklemeden ŞAK diye yanar
-//	      }
-//	      else
-//	      {
+	      if (HAL_GPIO_ReadPin(BTN4_GPIO_Port, BTN4_Pin) == GPIO_PIN_RESET)
+	      {
+	      	  HAL_GPIO_WritePin(DORTLU_GPIO_Port, DORTLU_Pin, GPIO_PIN_SET); // Butona basıldığı an LED hiç beklemeden ŞAK diye yanar
+	      }
+	      else
+	      {
 //	      Buton kapatılmaya çalışıldığında (GND'den ayrılırken)
 //	      Mekanik kararsızlığı aşmak için işlemciyi 80 ms bekletiyoruz
-//	      HAL_Delay(80);
+	      HAL_Delay(80);
 //	      // 80 ms sonra hala bırakılmış durumdaysa LED'i kesin olarak söndür
-//	      if (HAL_GPIO_ReadPin(BTN4_GPIO_Port, BTN4_Pin) == GPIO_PIN_SET)
-//	      {
-//	      	  HAL_GPIO_WritePin(DORTLU_GPIO_Port, DORTLU_Pin, GPIO_PIN_RESET);
-//	      }
-//	      }
-	  
-//	      // FARLAR (BTN5)
-//	      if (HAL_GPIO_ReadPin(BTN5_GPIO_Port, BTN5_Pin) == GPIO_PIN_RESET)
-//	      {
-//	          HAL_GPIO_WritePin(FARLAR_GPIO_Port, FARLAR_Pin, GPIO_PIN_SET);
-//	      }
-//	      else
-//	      {
-//	          HAL_GPIO_WritePin(FARLAR_GPIO_Port, FARLAR_Pin, GPIO_PIN_RESET);
-//	      }
-	  
+	      if (HAL_GPIO_ReadPin(BTN4_GPIO_Port, BTN4_Pin) == GPIO_PIN_SET)
+	      {
+	      	  HAL_GPIO_WritePin(DORTLU_GPIO_Port, DORTLU_Pin, GPIO_PIN_RESET);
+	      }
+	      }
+
+	      // FARLAR (BTN5)
+	      if (HAL_GPIO_ReadPin(BTN5_GPIO_Port, BTN5_Pin) == GPIO_PIN_RESET)
+	      {
+	          HAL_GPIO_WritePin(FARLAR_GPIO_Port, FARLAR_Pin, GPIO_PIN_SET);
+	      }
+	      else
+	      {
+	          HAL_GPIO_WritePin(FARLAR_GPIO_Port, FARLAR_Pin, GPIO_PIN_RESET);
+	      }
+
       /* --- ZAMANLAYICI KONTROLLERİ --- */
 	  uint32_t su_anki_zaman = HAL_GetTick();
 
@@ -397,8 +397,8 @@ int main(void)
 	  	        }
 	  	    }
 	  	    HAL_ADC_Stop(&hadc2);
-	  
-	  	      /* --- ADIM 2: MOTOR SÜRÜCÜ KONTROLÜ --- */                                       
+
+	  	      /* --- ADIM 2: MOTOR SÜRÜCÜ KONTROLÜ --- */
 //	  	      if (gaz_degeri < 5)
 //	  	      {
 //	  	          HAL_GPIO_WritePin(GPIOE, GPIO_PIN_7, GPIO_PIN_RESET);
@@ -413,7 +413,7 @@ int main(void)
 //	  	      }
 // Önce potansiyometreden değeri oku (senin kodunda bu zaten vardır)
 // gaz_degeri = ADC_oku();
-	
+
 // ///	  // potu çevirince hızı ayarlıyoruz ama ölü bölgeyi ayırarak
 
 	  	  if (gaz_degeri < 5)
