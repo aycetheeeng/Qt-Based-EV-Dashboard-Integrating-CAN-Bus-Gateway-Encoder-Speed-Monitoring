@@ -55,7 +55,16 @@ UART_HandleTypeDef huart2;
 
 /* USER CODE BEGIN PV */
 FDCAN_RxHeaderTypeDef RxHeader;
-uint8_t RxData[8];
+volatile uint8_t RxData[8];
+
+volatile uint8_t RxData101[8];
+volatile uint8_t RxData102[8];
+volatile uint8_t RxData103[8];
+volatile uint8_t RxData104[8];
+
+volatile uint8_t can_mesaj_geldi = 0; // Bayrak değişkenimiz
+volatile uint32_t gelen_id = 0;
+
 const char term_msg[] = "CAN Verisi Basariyla Alindi!\r\n";
 
 int tam_sayi_kalibre_hiz = 0;
@@ -65,9 +74,16 @@ int gelen_akim_ofsetli = 0;
 
 float gelen_anlik_kw = 0.0f;
 float gelen_tuketim_100km = 0.0f;
-int gelen_batarya_yuzde = 0;
+int   gelen_batarya_yuzde = 0;
 float gelen_menzil_km = 0.0f;
 float gelen_toplam_kwh = 0.0f;
+
+
+volatile uint8_t can_101_geldi = 0;
+volatile uint8_t can_102_geldi = 0;
+volatile uint8_t can_103_geldi = 0;
+
+
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
@@ -149,6 +165,67 @@ int main(void)
 
     /* USER CODE BEGIN 3 */
 
+	  	  uint8_t uart_paket[11];
+	      uart_paket[0] = 0xAA;
+	      uart_paket[10] = 0x55;
+
+	      // --- 103 PAKETİ KONTROLÜ (Sinyaller - Öncelikli olsun diye en üste koyduk) ---
+	      if (can_103_geldi == 1)
+	      {
+	          can_103_geldi = 0; // Bayrağı hemen indiriyoruz ki yenisi gelirse kaçmasın
+	          uart_paket[1] = 3;
+	          memcpy(&uart_paket[2], (void*)RxData103, 8);
+	          HAL_UART_Transmit(&huart2, uart_paket, 11, 10);
+	          HAL_GPIO_TogglePin(GPIOA, GPIO_PIN_5);
+	      }
+
+	      // --- 101 PAKETİ KONTROLÜ ---
+	      if (can_101_geldi == 1)
+	      {
+	          can_101_geldi = 0;
+	          uart_paket[1] = 1;
+	          memcpy(&uart_paket[2], (void*)RxData101, 8);
+	          HAL_UART_Transmit(&huart2, uart_paket, 11, 10);
+	          HAL_GPIO_TogglePin(GPIOA, GPIO_PIN_5);
+	      }
+
+	      // --- 102 PAKETİ KONTROLÜ ---
+	      if (can_102_geldi == 1)
+	      {
+	          can_102_geldi = 0;
+	          uart_paket[1] = 2;
+	          memcpy(&uart_paket[2], (void*)RxData102, 8);
+	          HAL_UART_Transmit(&huart2, uart_paket, 11, 10);
+	          HAL_GPIO_TogglePin(GPIOA, GPIO_PIN_5);
+	      }
+
+//	  if (can_mesaj_geldi == 1)
+//	        {
+//	            uint8_t uart_paket[11];
+//	            uart_paket[0] = 0xAA;
+//	            uart_paket[10] = 0x55;
+//
+//	            if (gelen_id == 0x101)
+//	            {
+//	                uart_paket[1] = 1;
+//	                memcpy(&uart_paket[2], (void*)RxData101, 8);
+//	            }
+//	            else if (gelen_id == 0x102)
+//	            {
+//	                uart_paket[1] = 2;
+//	                memcpy(&uart_paket[2], (void*)RxData102, 8);
+//	            }
+//	            else if (gelen_id == 0x103)
+//	            {
+//	                uart_paket[1] = 3;
+//	                memcpy(&uart_paket[2], (void*)RxData103, 8);
+//	            }
+//
+//	            HAL_UART_Transmit(&huart2, uart_paket, 11, 10);
+//	            HAL_GPIO_TogglePin(GPIOA, GPIO_PIN_5);
+//
+//	            can_mesaj_geldi = 0;
+//	        }
   }
   /* USER CODE END 3 */
 }
@@ -325,37 +402,159 @@ static void MX_GPIO_Init(void)
 /* USER CODE BEGIN 4 */
 
 
-/* CAN Mesaj Alım Callback Fonksiyonu */
 void HAL_FDCAN_RxFifo0Callback(FDCAN_HandleTypeDef *hfdcan, uint32_t RxFifo0ITs)
 {
     if ((RxFifo0ITs & FDCAN_IT_RX_FIFO0_NEW_MESSAGE) != RESET)
     {
-        /* 1. CAN Hattından Gelen Veriyi Oku */
-        if (HAL_FDCAN_GetRxMessage(hfdcan, FDCAN_RX_FIFO0, &RxHeader, RxData) == HAL_OK)
+        // Donanımsal çakışmaları engellemek için yerel header ve data kullanalım
+        FDCAN_RxHeaderTypeDef LocalRxHeader;
+        uint8_t LocalRxData[8];
+
+        if (HAL_FDCAN_GetRxMessage(hfdcan, FDCAN_RX_FIFO0, &LocalRxHeader, LocalRxData) == HAL_OK)
         {
-            /* --- BURADAN İTİBAREN SENİN KODLARIN BAŞLIYOR --- */
+            switch(LocalRxHeader.Identifier)
+            {
+                case 0x101:
+                    memcpy((void*)RxData101, (void*)LocalRxData, 8);
+                    can_101_geldi = 1; // Sadece 101 bayrağı kalkar
+                    break;
 
-            uint8_t uart_paket[11];
-            uart_paket[0] = 0xAA;   // Başlangıç Byte (Header)
+                case 0x102:
+                    memcpy((void*)RxData102, (void*)LocalRxData, 8);
+                    can_102_geldi = 1; // Sadece 102 bayrağı kalkar
+                    break;
 
-            // CAN ID'sine göre paket tipini belirle (Hız mı, Batarya mı?)
-            uart_paket[1] = (RxHeader.Identifier == 0x101) ? 1 : 2;
+                case 0x103:
+                    memcpy((void*)RxData103, (void*)LocalRxData, 8);
+                    can_103_geldi = 1; // Sadece 103 bayrağı kalkar
+                    break;
 
-            // 8 Byte'lık CAN verisini paketin ortasına kopyala
-            memcpy(&uart_paket[2], RxData, 8);
-
-            uart_paket[10] = 0x55;  // Bitiş Byte (Footer)
-
-            /* 2. Hazırlanan 11 Byte'lık Paketi Bilgisayara (Qt) Gönder */
-            HAL_UART_Transmit(&huart2, uart_paket, 11, 10);
-
-            /* --- KODLARIN BURADA BİTTİ --- */
-
-            // Görsel geri bildirim için LED'i yak/söndür
-            HAL_GPIO_TogglePin(GPIOA, GPIO_PIN_5);
+                default:
+                    break;
+            }
         }
     }
 }
+
+
+
+
+
+
+
+
+//void HAL_FDCAN_RxFifo0Callback(FDCAN_HandleTypeDef *hfdcan, uint32_t RxFifo0ITs)
+//{
+//    if ((RxFifo0ITs & FDCAN_IT_RX_FIFO0_NEW_MESSAGE) != RESET)
+//    {
+//        if (HAL_FDCAN_GetRxMessage(hfdcan, FDCAN_RX_FIFO0, &RxHeader, (uint8_t*)RxData) == HAL_OK)
+//        {
+//            switch(RxHeader.Identifier)
+//            {
+//                case 0x101:
+//                    memcpy((void*)RxData101, (void*)RxData, 8);
+//                    break;
+//
+//                case 0x102:
+//                    memcpy((void*)RxData102, (void*)RxData, 8);
+//                    break;
+//
+//                case 0x103:
+//                    memcpy((void*)RxData103, (void*)RxData, 8);
+//                    break;
+//
+//                default:
+//                    return;
+//            }
+//
+//            gelen_id = RxHeader.Identifier;
+//            can_mesaj_geldi = 1;
+//        }
+//    }
+//}
+
+/* CAN Mesaj Alım Callback Fonksiyonu */
+//void HAL_FDCAN_RxFifo0Callback(FDCAN_HandleTypeDef *hfdcan,
+//                               uint32_t RxFifo0ITs)
+//{
+//    if ((RxFifo0ITs & FDCAN_IT_RX_FIFO0_NEW_MESSAGE) != RESET)
+//    {
+//        if (HAL_FDCAN_GetRxMessage(hfdcan,
+//                                   FDCAN_RX_FIFO0,
+//                                   &RxHeader,
+//                                   RxData) == HAL_OK)
+//        {
+//            uint8_t uart_paket[11];
+//
+//            uart_paket[0] = 0xAA;
+//
+//            switch(RxHeader.Identifier)
+//            {
+//                case 0x101:
+//                    memcpy(RxData101, RxData, 8);
+//                    uart_paket[1] = 1;
+//                    memcpy(&uart_paket[2], RxData101, 8);
+//                    break;
+//
+//                case 0x102:
+//                    memcpy(RxData102, RxData, 8);
+//                    uart_paket[1] = 2;
+//                    memcpy(&uart_paket[2], RxData102, 8);
+//                    break;
+//
+//                case 0x103:
+//                    memcpy(RxData103, RxData, 8);
+//                    uart_paket[1] = 3;
+//                    memcpy(&uart_paket[2], RxData103, 8);
+//                    break;
+//
+//                default:
+//                    return;
+//            }
+//
+//            uart_paket[10] = 0x55;
+//
+//            HAL_UART_Transmit(&huart2,
+//                              uart_paket,
+//                              11,
+//                              10);
+//
+//            HAL_GPIO_TogglePin(GPIOA, GPIO_PIN_5);
+//        }
+//    }
+//}
+
+
+//void HAL_FDCAN_RxFifo0Callback(FDCAN_HandleTypeDef *hfdcan, uint32_t RxFifo0ITs)
+//{
+//    if ((RxFifo0ITs & FDCAN_IT_RX_FIFO0_NEW_MESSAGE) != RESET)
+//    {
+//        /* 1. CAN Hattından Gelen Veriyi Oku */
+//        if (HAL_FDCAN_GetRxMessage(hfdcan, FDCAN_RX_FIFO0, &RxHeader, RxData) == HAL_OK)
+//        {
+//            /* --- BURADAN İTİBAREN SENİN KODLARIN BAŞLIYOR --- */
+//
+//            uint8_t uart_paket[11];
+//            uart_paket[0] = 0xAA;   // Başlangıç Byte (Header)
+//
+//            // CAN ID'sine göre paket tipini belirle (Hız mı, Batarya mı?)
+//            uart_paket[1] = (RxHeader.Identifier == 0x101) ? 1 : 2;
+//
+//            // 8 Byte'lık CAN verisini paketin ortasına kopyala
+//            memcpy(&uart_paket[2], RxData, 8);
+//
+//            uart_paket[10] = 0x55;  // Bitiş Byte (Footer)
+//
+//            /* 2. Hazırlanan 11 Byte'lık Paketi Bilgisayara (Qt) Gönder */
+//            HAL_UART_Transmit(&huart2, uart_paket, 11, 10);
+//
+//            /* --- KODLARIN BURADA BİTTİ --- */
+//
+//            // Görsel geri bildirim için LED'i yak/söndür
+//            HAL_GPIO_TogglePin(GPIOA, GPIO_PIN_5);
+//        }
+//    }
+//}
 
 
 
