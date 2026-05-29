@@ -1,3 +1,9 @@
+// ÖNEMLİ: bu kod henüz daha proje kurulmadan önceki versiyon2 kodu, önceki ilk kod yalnızca sag_sinyal ve sol_siynali okuyan koddu (v1), 
+// bu kod hız tüketim batarya ve menzil verilerini gösteren kod (v2), bundan sonraki ise proje stm32f4 ten verilerin farklı idler ile (0x101, 0x102 ve 0x103)
+// olarak gönderildiği v3 kodu VERSİYON 3. tüm veriler geliyor şu an ama sinyaller üzerinde çalışıyorum. (29.05.2026)
+
+// bundan sonraki kod v4 olacak yani hepsini okuduğumuzdan emin olucaz.
+
 #include "serialhandler.h"
 
 SerialHandler::SerialHandler(QObject *parent) : QObject(parent), m_speed(0) {
