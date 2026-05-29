@@ -26,11 +26,11 @@
 /* USER CODE END Header */
 /* Includes ------------------------------------------------------------------*/
 #include "main.h"
-
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
-#include <stdio.h>
-#include <stdlib.h>  // Bunu eklemezsen rand() çalışmaz
+#include "stdio.h"
+#include "stdlib.h"
+#include "stdbool.h"
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -51,59 +51,15 @@
 /* Private variables ---------------------------------------------------------*/
 ADC_HandleTypeDef hadc1;
 ADC_HandleTypeDef hadc2;
+ADC_HandleTypeDef hadc3;
 
 CAN_HandleTypeDef hcan1;
 
 TIM_HandleTypeDef htim3;
+TIM_HandleTypeDef htim4;
 
 /* USER CODE BEGIN PV */
-CAN_TxHeaderTypeDef TxHeader;
-uint8_t  TxData[8] = {0}; // Test verisi
-uint32_t TxMailbox = 0U;
-volatile uint32_t adc_val = 0;   // Debug için global yaptık
-volatile int16_t gaz_degeri = 0;
-volatile uint32_t motor_puls_sayaci = 0;
-int      ppr = 11; // Motorunun PPR değerini buraya yaz
-int      reduksiyon = 10; // Dişli oranını buraya yaz
-float    tekerlek_cevre = 1.88; // 60cm çap için metre cinsinden
-float    gercek_fiziksel_hiz = 0; // Motorun gerçekteki hızı (78 km/h olan)
-float    kalibre_edilen_hiz = 0;   // Ekranda görünecek olan (220 km/h olan)
-uint32_t adc_degeri_akim;        // ADC'den gelen ham sayı için
-float okunan_voltaj;             // PA1'deki 0-3.3V arası değer için
-float gercek_sensor_voltaji;     // 2 ile çarpılmış hali için
-float amper;                     // Sonuç olan Amper değeri için
-float anlik_amper;   // Bu Live Watch'ta zıplamasını izleyeceğin ham olan (YENİ!)
-
-// Sabit çarpanımız (78.04'ü 220'ye tamamlayan sihirli sayı)
-const float kalibrasyon_katsayisi = 2.819f;
-
-int tam_sayi_kalibre_hiz = 0; // Ekrana basılacak temiz tam sayı
-
-
-/* --- YENİ EKLENECEK GÜÇ VE ENERJİ DEĞİŞKENLERİ --- */
-
-float pil_voltaji = 12.0f;       // Aracın ana batarya voltajı (Simülasyon için)
-float anlik_watt = 0.0f;         // P = V * I (Anlık Güç)
-float anlik_kw = 0.0f;           // Dashboard'daki küçük kW yazısı için
-float sanal_kw = 0.0f;           // Dashboard'daki büyük 15 kW gibi rakamlar için (Gerekirse)
-
-float toplam_harcanan_wh = 0.0f; // Zamanla biriken enerji (Watt-saat)
-float toplam_kwh = 0.0f;         // Yeşil rakam (18.5 kWh) için toplam enerji
-
-float verimlilik = 0.0f;         // kWh / 100km göstergesi için
-
-/* --- ZAMANLAMA --- */
-uint32_t son_zaman = 0;          // 1000ms sayacı için
-uint32_t su_anki_zaman = 0;      // HAL_GetTick() değerini tutmak için
-
-float toplam_batarya_kapasitesi = 75.0f; // kWh (Togg/Tesla referansımız)
-float kalan_batarya_kwh = 0.0f;          // O an pilde kalan enerji
-float batarya_yuzdesi = 0.0f;           // % (0-100 arası)
-float kalan_menzil_km = 0.0f;           // Kaç km daha gideriz
-
-// Dashboard'da Görülecek 3 Ana Veri:
-float anlik_tuketim_100km = 0.0f;  // 3. ANLIK TÜKETİM (100 km'de kaç kWh yakarım?)
-float batarya_yuzdesi_baslangic = 0.0f;
+extern CAN_TxHeaderTypeDef TxHeader;
 
 /* USER CODE END PV */
 
@@ -114,19 +70,26 @@ static void MX_ADC1_Init(void);
 static void MX_CAN1_Init(void);
 static void MX_TIM3_Init(void);
 static void MX_ADC2_Init(void);
+static void MX_ADC3_Init(void);
+static void MX_TIM4_Init(void);
 /* USER CODE BEGIN PFP */
-void Hiz_Hesapla(void);
-void Guc_Hesapla(void);
-void Enerji_Hesapla(void);
+
+void batarya(void);
+void sinyalbutonlari(void);
+void farlar(void);
+void drivemod(void);
+void prndhesap(void);
+void ADCHizOlc(void);
+void akimoku(void);
+void Hesaplamalar(void);
+void UARTgonderim(void);
+
 /* USER CODE END PFP */
 
 /* Private user code ---------------------------------------------------------*/
 /* USER CODE BEGIN 0 */
-void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin) {
-    if(GPIO_Pin == GPIO_PIN_9) { // PE9'dan sinyal gelince
-        motor_puls_sayaci++;
-    }
-}
+
+
 /* USER CODE END 0 */
 
 /**
@@ -162,11 +125,11 @@ int main(void)
   MX_CAN1_Init();
   MX_TIM3_Init();
   MX_ADC2_Init();
+  MX_ADC3_Init();
+  MX_TIM4_Init();
   /* USER CODE BEGIN 2 */
-  // --- 1. Önce Yönü Belirle (PE7 ve PE8) ---
   // 1. CAN Hattını Başlat (Ekrana veri gitmesi için şart)
   HAL_CAN_Start(&hcan1);
-  (void)HAL_CAN_Start(&hcan1);
   HAL_TIM_PWM_Start(&htim3, TIM_CHANNEL_1);
 
   /* Mesaj Ayarları: ID: 0x103 (Dashboard bu ID'yi bekliyor) */
@@ -174,14 +137,8 @@ int main(void)
   TxHeader.RTR = CAN_RTR_DATA;
   TxHeader.DLC = 8U; /* 8 byte veri yolluyoruz */
   TxHeader.TransmitGlobalTime = DISABLE;
-  uint32_t son_zaman = 0;
 
-
-  srand(HAL_GetTick());
-  batarya_yuzdesi_baslangic = (float)(rand() % 41 + 55); // %55-%95 arası başla
-  batarya_yuzdesi = batarya_yuzdesi_baslangic;
-  kalan_batarya_kwh = (batarya_yuzdesi * toplam_batarya_kapasitesi) / 100.0f;
-  toplam_kwh = 0; // Her resetlendiğinde harcananı sıfırla
+  batarya();
 
   /* USER CODE END 2 */
 
@@ -192,109 +149,19 @@ int main(void)
     /* USER CODE END WHILE */
 
     /* USER CODE BEGIN 3 */
-	      /* --- ZAMANLAYICI KONTROLLERİ --- */
-	  uint32_t su_anki_zaman = HAL_GetTick();
 
-	  	      // 1. Hız Hesabı (Her 1000ms'de bir)
-	  	      if (su_anki_zaman - son_zaman >= 1000)
-	  	      {
-	  	          Hiz_Hesapla();
-	  	          Guc_Hesapla();    // YENİ
-	  	          Enerji_Hesapla(); // YENİ
-
-	  	          son_zaman = su_anki_zaman;
-	  	      }
-
-	  	      /* --- ADIM 1: POTU OKU (ADC1) --- */
-	  	      HAL_ADC_Start(&hadc1);
-	  	      if (HAL_ADC_PollForConversion(&hadc1, 10) == HAL_OK)
-	  	      {
-	  	          adc_val = HAL_ADC_GetValue(&hadc1);
-	  	          gaz_degeri = (int16_t)((adc_val * 100) / 4095);
-	  	      }
-	  	      HAL_ADC_Stop(&hadc1);
-
-	  	      /* --- YENİ ADIM: AKIM SENSÖRÜNÜ OKU (ADC2 - PA1) --- */
-	  	    HAL_ADC_Start(&hadc2);
-	  	    if (HAL_ADC_PollForConversion(&hadc2, 10) == HAL_OK)
-	  	    {
-	  	        adc_degeri_akim = HAL_ADC_GetValue(&hadc2);
-	  	        okunan_voltaj = (adc_degeri_akim * 3.3f) / 4095.0f;
-	  	        gercek_sensor_voltaji = okunan_voltaj * 1.9898f;
-
-	  	        // Anlık amper hesabı
-	  	        anlik_amper = (gercek_sensor_voltaji - 2.68f) / 0.185f;
-
-	  	        // FİLTRE: 0.98 çok yavaştı, 0.90 yaparak tepkiyi hızlandıralım
-	  	        amper = (amper * 0.90f) + (anlik_amper * 0.10f);
-
-	  	        // ÖLÜ BÖLGE: 0.08 yerine 0.02 yapalım ki 0.33A'lik motor akımını görebilelim
-	  	        if (amper < 0.02f && amper > -0.02f) {
-	  	            amper = 0.00f;
-	  	        }
-	  	    }
-	  	    HAL_ADC_Stop(&hadc2);
-	  	      /* --- ADIM 2: MOTOR SÜRÜCÜ KONTROLÜ --- */
-	  	      if (gaz_degeri < 5)
-	  	      {
-	  	          HAL_GPIO_WritePin(GPIOE, GPIO_PIN_7, GPIO_PIN_RESET);
-	  	          HAL_GPIO_WritePin(GPIOE, GPIO_PIN_8, GPIO_PIN_RESET);
-	  	          __HAL_TIM_SET_COMPARE(&htim3, TIM_CHANNEL_1, 0);
-	  	      }
-	  	      else
-	  	      {
-	  	          HAL_GPIO_WritePin(GPIOE, GPIO_PIN_7, GPIO_PIN_SET);
-	  	          HAL_GPIO_WritePin(GPIOE, GPIO_PIN_8, GPIO_PIN_RESET);
-	  	          __HAL_TIM_SET_COMPARE(&htim3, TIM_CHANNEL_1, gaz_degeri);
-	  	      }
-
-	  	    /* --- ADIM 3: CAN BUS HABERLEŞMESİ (Her 500ms'de bir) --- */
-	  	    static uint32_t can_zaman = 0;
-	  	    if (su_anki_zaman - can_zaman >= 500)
-	  	    {
-	  	        // --- MESAJ 1: HIZ, GÜÇ VE TÜKETİM (0x101) ---
-	  	        TxHeader.StdId = 0x101;
-	  	        TxHeader.DLC = 8;
-	  	        TxData[0] = (uint8_t)tam_sayi_kalibre_hiz;
-
-	  	        int16_t guc_send = (int16_t)(anlik_kw * 10);
-	  	        TxData[1] = (uint8_t)(guc_send & 0xFF);
-	  	        TxData[2] = (uint8_t)((guc_send >> 8) & 0xFF);
-
-	  	        uint16_t tuketim_send = (uint16_t)(anlik_tuketim_100km * 10);
-	  	        TxData[3] = (uint8_t)(tuketim_send & 0xFF);
-	  	        TxData[4] = (uint8_t)((tuketim_send >> 8) & 0xFF);
-
-	  	        // Mesajı gönder ve boş mailbox bekle
-	  	        while(HAL_CAN_GetTxMailboxesFreeLevel(&hcan1) == 0);
-	  	        HAL_CAN_AddTxMessage(&hcan1, &TxHeader, TxData, &TxMailbox);
-
-	  	        // Küçücük bir nefes payı (Opsiyonel ama garantidir)
-	  	        HAL_Delay(5);
-
-	  	        // --- MESAJ 2: BATARYA VE MENZİL (0x102) ---
-	  	        TxHeader.StdId = 0x102;
-	  	        TxData[0] = (uint8_t)batarya_yuzdesi;
-
-	  	        uint16_t menzil_send = (uint16_t)kalan_menzil_km;
-	  	        TxData[1] = (uint8_t)(menzil_send & 0xFF);
-	  	        TxData[2] = (uint8_t)((menzil_send >> 8) & 0xFF);
-
-	  	        uint16_t trip_send = (uint16_t)(toplam_kwh * 100);
-	  	        TxData[3] = (uint8_t)(trip_send & 0xFF);
-	  	        TxData[4] = (uint8_t)((trip_send >> 8) & 0xFF);
-
-	  	        while(HAL_CAN_GetTxMailboxesFreeLevel(&hcan1) == 0);
-	  	        if (HAL_CAN_AddTxMessage(&hcan1, &TxHeader, TxData, &TxMailbox) == HAL_OK)
-	  	        {
-	  	            HAL_GPIO_TogglePin(GPIOD, GPIO_PIN_15); // Turuncu/Mavi LED yanıp söner
-	  	        }
-
-	  	        can_zaman = su_anki_zaman;
-	  	    }
-	      // DİKKAT: Burada ASLA HAL_Delay(500) olmamalı!
-	      // Delay koyarsan işlemci o sırada hiçbir şey yapamaz, encoder'ı bile kaçırabilirsin.
-
+	    // 1) BUTONLAR / KULLANICI GİRİŞLERİ
+	    sinyalbutonlari();
+	    farlar();
+	    drivemod();
+	    // 2) ADC OKUMALARI
+	    prndhesap();
+	    ADCHizOlc();
+	    akimoku();
+	    // 3) HESAPLAMALAR
+	    Hesaplamalar();
+	    // 4) CAN GÖNDERİMLERİ
+	    UARTgonderim();
   }
   /* USER CODE END 3 */
 }
@@ -449,6 +316,58 @@ static void MX_ADC2_Init(void)
 }
 
 /**
+  * @brief ADC3 Initialization Function
+  * @param None
+  * @retval None
+  */
+static void MX_ADC3_Init(void)
+{
+
+  /* USER CODE BEGIN ADC3_Init 0 */
+
+  /* USER CODE END ADC3_Init 0 */
+
+  ADC_ChannelConfTypeDef sConfig = {0};
+
+  /* USER CODE BEGIN ADC3_Init 1 */
+
+  /* USER CODE END ADC3_Init 1 */
+
+  /** Configure the global features of the ADC (Clock, Resolution, Data Alignment and number of conversion)
+  */
+  hadc3.Instance = ADC3;
+  hadc3.Init.ClockPrescaler = ADC_CLOCK_SYNC_PCLK_DIV2;
+  hadc3.Init.Resolution = ADC_RESOLUTION_12B;
+  hadc3.Init.ScanConvMode = DISABLE;
+  hadc3.Init.ContinuousConvMode = DISABLE;
+  hadc3.Init.DiscontinuousConvMode = DISABLE;
+  hadc3.Init.ExternalTrigConvEdge = ADC_EXTERNALTRIGCONVEDGE_NONE;
+  hadc3.Init.ExternalTrigConv = ADC_SOFTWARE_START;
+  hadc3.Init.DataAlign = ADC_DATAALIGN_RIGHT;
+  hadc3.Init.NbrOfConversion = 1;
+  hadc3.Init.DMAContinuousRequests = DISABLE;
+  hadc3.Init.EOCSelection = ADC_EOC_SINGLE_CONV;
+  if (HAL_ADC_Init(&hadc3) != HAL_OK)
+  {
+    Error_Handler();
+  }
+
+  /** Configure for the selected ADC regular channel its corresponding rank in the sequencer and its sample time.
+  */
+  sConfig.Channel = ADC_CHANNEL_10;
+  sConfig.Rank = 1;
+  sConfig.SamplingTime = ADC_SAMPLETIME_3CYCLES;
+  if (HAL_ADC_ConfigChannel(&hadc3, &sConfig) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  /* USER CODE BEGIN ADC3_Init 2 */
+
+  /* USER CODE END ADC3_Init 2 */
+
+}
+
+/**
   * @brief CAN1 Initialization Function
   * @param None
   * @retval None
@@ -536,6 +455,51 @@ static void MX_TIM3_Init(void)
 }
 
 /**
+  * @brief TIM4 Initialization Function
+  * @param None
+  * @retval None
+  */
+static void MX_TIM4_Init(void)
+{
+
+  /* USER CODE BEGIN TIM4_Init 0 */
+
+  /* USER CODE END TIM4_Init 0 */
+
+  TIM_ClockConfigTypeDef sClockSourceConfig = {0};
+  TIM_MasterConfigTypeDef sMasterConfig = {0};
+
+  /* USER CODE BEGIN TIM4_Init 1 */
+
+  /* USER CODE END TIM4_Init 1 */
+  htim4.Instance = TIM4;
+  htim4.Init.Prescaler = 8400-1;
+  htim4.Init.CounterMode = TIM_COUNTERMODE_UP;
+  htim4.Init.Period = 10000-1;
+  htim4.Init.ClockDivision = TIM_CLOCKDIVISION_DIV1;
+  htim4.Init.AutoReloadPreload = TIM_AUTORELOAD_PRELOAD_ENABLE;
+  if (HAL_TIM_Base_Init(&htim4) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  sClockSourceConfig.ClockSource = TIM_CLOCKSOURCE_INTERNAL;
+  if (HAL_TIM_ConfigClockSource(&htim4, &sClockSourceConfig) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  sMasterConfig.MasterOutputTrigger = TIM_TRGO_RESET;
+  sMasterConfig.MasterSlaveMode = TIM_MASTERSLAVEMODE_DISABLE;
+  if (HAL_TIMEx_MasterConfigSynchronization(&htim4, &sMasterConfig) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  /* USER CODE BEGIN TIM4_Init 2 */
+
+  /* USER CODE END TIM4_Init 2 */
+
+}
+
+/**
   * @brief GPIO Initialization Function
   * @param None
   * @retval None
@@ -549,6 +513,7 @@ static void MX_GPIO_Init(void)
 
   /* GPIO Ports Clock Enable */
   __HAL_RCC_GPIOH_CLK_ENABLE();
+  __HAL_RCC_GPIOC_CLK_ENABLE();
   __HAL_RCC_GPIOA_CLK_ENABLE();
   __HAL_RCC_GPIOB_CLK_ENABLE();
   __HAL_RCC_GPIOE_CLK_ENABLE();
@@ -559,6 +524,9 @@ static void MX_GPIO_Init(void)
 
   /*Configure GPIO pin Output Level */
   HAL_GPIO_WritePin(GPIOD, GPIO_PIN_15, GPIO_PIN_RESET);
+
+  /*Configure GPIO pin Output Level */
+  HAL_GPIO_WritePin(GPIOB, SOL_SINYAL_Pin|SAG_SINYAL_Pin|DORTLU_Pin|FARLAR_Pin, GPIO_PIN_RESET);
 
   /*Configure GPIO pin : BRAKE_BTN_Pin */
   GPIO_InitStruct.Pin = BRAKE_BTN_Pin;
@@ -575,9 +543,17 @@ static void MX_GPIO_Init(void)
 
   /*Configure GPIO pin : PE9 */
   GPIO_InitStruct.Pin = GPIO_PIN_9;
-  GPIO_InitStruct.Mode = GPIO_MODE_IT_RISING;
+  GPIO_InitStruct.Mode = GPIO_MODE_INPUT;
   GPIO_InitStruct.Pull = GPIO_NOPULL;
   HAL_GPIO_Init(GPIOE, &GPIO_InitStruct);
+
+  /*Configure GPIO pins : PD14 BTN1_Pin BTN2_Pin BTN3_Pin
+                           BTN5_Pin */
+  GPIO_InitStruct.Pin = GPIO_PIN_14|BTN1_Pin|BTN2_Pin|BTN3_Pin
+                          |BTN5_Pin;
+  GPIO_InitStruct.Mode = GPIO_MODE_INPUT;
+  GPIO_InitStruct.Pull = GPIO_PULLUP;
+  HAL_GPIO_Init(GPIOD, &GPIO_InitStruct);
 
   /*Configure GPIO pin : PD15 */
   GPIO_InitStruct.Pin = GPIO_PIN_15;
@@ -586,9 +562,18 @@ static void MX_GPIO_Init(void)
   GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
   HAL_GPIO_Init(GPIOD, &GPIO_InitStruct);
 
-  /* EXTI interrupt init*/
-  HAL_NVIC_SetPriority(EXTI9_5_IRQn, 2, 0);
-  HAL_NVIC_EnableIRQ(EXTI9_5_IRQn);
+  /*Configure GPIO pin : BTN4_Pin */
+  GPIO_InitStruct.Pin = BTN4_Pin;
+  GPIO_InitStruct.Mode = GPIO_MODE_INPUT;
+  GPIO_InitStruct.Pull = GPIO_NOPULL;
+  HAL_GPIO_Init(BTN4_GPIO_Port, &GPIO_InitStruct);
+
+  /*Configure GPIO pins : SOL_SINYAL_Pin SAG_SINYAL_Pin DORTLU_Pin FARLAR_Pin */
+  GPIO_InitStruct.Pin = SOL_SINYAL_Pin|SAG_SINYAL_Pin|DORTLU_Pin|FARLAR_Pin;
+  GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
+  GPIO_InitStruct.Pull = GPIO_NOPULL;
+  GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
+  HAL_GPIO_Init(GPIOB, &GPIO_InitStruct);
 
   /* USER CODE BEGIN MX_GPIO_Init_2 */
 
@@ -596,70 +581,7 @@ static void MX_GPIO_Init(void)
 }
 
 /* USER CODE BEGIN 4 */
-void Hiz_Hesapla() {
-    // 1. Önceki hesaplamaların aynen kalsın
-    float rps = (float)motor_puls_sayaci / (ppr * reduksiyon);
-    gercek_fiziksel_hiz = rps * tekerlek_cevre * 3.6f;
-    kalibre_edilen_hiz = gercek_fiziksel_hiz * kalibrasyon_katsayisi;
 
-    // 2. Limitör
-    if (kalibre_edilen_hiz > 220.0f) {
-        kalibre_edilen_hiz = 220.0f;
-    }
-
-    // 3. TAM SAYIYA DÖNÜŞTÜRME (Yuvarlayarak)
-    // 0.5 ekleyip int'e zorlarsak en yakın tam sayıya yuvarlar
-    tam_sayi_kalibre_hiz = (int)(kalibre_edilen_hiz + 0.5f);
-
-    // Sayacı sıfırla
-    motor_puls_sayaci = 0;
-}
-
-void Guc_Hesapla() {
-    // 1. ANLIK GÜÇ HESABI (Power - kW)
-    if (amper > 0.02f) { // Gaza basılıyorsa
-
-        // Hızın karesiyle artan aerodinamik direnç modeli (220 km/h -> 160 kW)
-        float hiz_orani = kalibre_edilen_hiz / 220.0f;
-        anlik_kw = hiz_orani * hiz_orani * 160.0f;
-
-        // Araç yavaş bile gitse ekranlar, klima ve sistem için min. güç harcanır
-        if (anlik_kw < 3.0f && kalibre_edilen_hiz > 5.0f) {
-            anlik_kw = 4.5f;
-        }
-    } else {
-        anlik_kw = 0.0f; // Ayak gazdan çekildi (Süzülme)
-    }
-}
-
-
-void Enerji_Hesapla() {
-    // 2. TOPLAM ENERJİ HESABI (Trip Energy - kWh)
-    // Her 1 saniyede çalıştığı için gücü (kW) saniyeye çevirip ekliyoruz
-    float saniyelik_harcanan = anlik_kw / 3600.0f;
-    toplam_kwh += saniyelik_harcanan; // Bu sayaç gibidir, yavaş yavaş artar.
-
-    // Batarya düşüşü
-    kalan_batarya_kwh = (batarya_yuzdesi_baslangic * toplam_batarya_kapasitesi / 100.0f) - toplam_kwh;
-    if (kalan_batarya_kwh < 0) kalan_batarya_kwh = 0.0f;
-    batarya_yuzdesi = (kalan_batarya_kwh / toplam_batarya_kapasitesi) * 100.0f;
-
-    // 3. ANLIK TÜKETİM HESABI (Consumption - kWh/100km)
-    // Gerçek Araç Formülü: (Güç / Hız) * 100
-    if (kalibre_edilen_hiz > 5.0f) {
-        anlik_tuketim_100km = (anlik_kw / (float)kalibre_edilen_hiz) * 100.0f;
-
-        // Menzili de artık doğrudan 100km tüketimine bağladık!
-        if (anlik_tuketim_100km > 0) {
-            kalan_menzil_km = (kalan_batarya_kwh / anlik_tuketim_100km) * 100.0f;
-        }
-    } else {
-        // Araç dururken veya çok yavaşken "100 km" hesabı sonsuza gider, bu yüzden 0 gösterilir.
-        anlik_tuketim_100km = 0.0f;
-        // Dururken ortalama verimlilik (15 kWh/100km) üzerinden menzil tahmini yapılır
-        kalan_menzil_km = (kalan_batarya_kwh / 15.0f) * 100.0f;
-    }
-}
 
 /* USER CODE END 4 */
 
