@@ -29,7 +29,7 @@
 
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
-#include <stdio.h>
+#include "stdio.h"
 #include "string.h"
 /* USER CODE END Includes */
 
@@ -199,33 +199,6 @@ int main(void)
 	          HAL_GPIO_TogglePin(GPIOA, GPIO_PIN_5);
 	      }
 
-//	  if (can_mesaj_geldi == 1)
-//	        {
-//	            uint8_t uart_paket[11];
-//	            uart_paket[0] = 0xAA;
-//	            uart_paket[10] = 0x55;
-//
-//	            if (gelen_id == 0x101)
-//	            {
-//	                uart_paket[1] = 1;
-//	                memcpy(&uart_paket[2], (void*)RxData101, 8);
-//	            }
-//	            else if (gelen_id == 0x102)
-//	            {
-//	                uart_paket[1] = 2;
-//	                memcpy(&uart_paket[2], (void*)RxData102, 8);
-//	            }
-//	            else if (gelen_id == 0x103)
-//	            {
-//	                uart_paket[1] = 3;
-//	                memcpy(&uart_paket[2], (void*)RxData103, 8);
-//	            }
-//
-//	            HAL_UART_Transmit(&huart2, uart_paket, 11, 10);
-//	            HAL_GPIO_TogglePin(GPIOA, GPIO_PIN_5);
-//
-//	            can_mesaj_geldi = 0;
-//	        }
   }
   /* USER CODE END 3 */
 }
@@ -436,168 +409,6 @@ void HAL_FDCAN_RxFifo0Callback(FDCAN_HandleTypeDef *hfdcan, uint32_t RxFifo0ITs)
     }
 }
 
-
-
-
-
-
-
-
-//void HAL_FDCAN_RxFifo0Callback(FDCAN_HandleTypeDef *hfdcan, uint32_t RxFifo0ITs)
-//{
-//    if ((RxFifo0ITs & FDCAN_IT_RX_FIFO0_NEW_MESSAGE) != RESET)
-//    {
-//        if (HAL_FDCAN_GetRxMessage(hfdcan, FDCAN_RX_FIFO0, &RxHeader, (uint8_t*)RxData) == HAL_OK)
-//        {
-//            switch(RxHeader.Identifier)
-//            {
-//                case 0x101:
-//                    memcpy((void*)RxData101, (void*)RxData, 8);
-//                    break;
-//
-//                case 0x102:
-//                    memcpy((void*)RxData102, (void*)RxData, 8);
-//                    break;
-//
-//                case 0x103:
-//                    memcpy((void*)RxData103, (void*)RxData, 8);
-//                    break;
-//
-//                default:
-//                    return;
-//            }
-//
-//            gelen_id = RxHeader.Identifier;
-//            can_mesaj_geldi = 1;
-//        }
-//    }
-//}
-
-/* CAN Mesaj Alım Callback Fonksiyonu */
-//void HAL_FDCAN_RxFifo0Callback(FDCAN_HandleTypeDef *hfdcan,
-//                               uint32_t RxFifo0ITs)
-//{
-//    if ((RxFifo0ITs & FDCAN_IT_RX_FIFO0_NEW_MESSAGE) != RESET)
-//    {
-//        if (HAL_FDCAN_GetRxMessage(hfdcan,
-//                                   FDCAN_RX_FIFO0,
-//                                   &RxHeader,
-//                                   RxData) == HAL_OK)
-//        {
-//            uint8_t uart_paket[11];
-//
-//            uart_paket[0] = 0xAA;
-//
-//            switch(RxHeader.Identifier)
-//            {
-//                case 0x101:
-//                    memcpy(RxData101, RxData, 8);
-//                    uart_paket[1] = 1;
-//                    memcpy(&uart_paket[2], RxData101, 8);
-//                    break;
-//
-//                case 0x102:
-//                    memcpy(RxData102, RxData, 8);
-//                    uart_paket[1] = 2;
-//                    memcpy(&uart_paket[2], RxData102, 8);
-//                    break;
-//
-//                case 0x103:
-//                    memcpy(RxData103, RxData, 8);
-//                    uart_paket[1] = 3;
-//                    memcpy(&uart_paket[2], RxData103, 8);
-//                    break;
-//
-//                default:
-//                    return;
-//            }
-//
-//            uart_paket[10] = 0x55;
-//
-//            HAL_UART_Transmit(&huart2,
-//                              uart_paket,
-//                              11,
-//                              10);
-//
-//            HAL_GPIO_TogglePin(GPIOA, GPIO_PIN_5);
-//        }
-//    }
-//}
-
-
-//void HAL_FDCAN_RxFifo0Callback(FDCAN_HandleTypeDef *hfdcan, uint32_t RxFifo0ITs)
-//{
-//    if ((RxFifo0ITs & FDCAN_IT_RX_FIFO0_NEW_MESSAGE) != RESET)
-//    {
-//        /* 1. CAN Hattından Gelen Veriyi Oku */
-//        if (HAL_FDCAN_GetRxMessage(hfdcan, FDCAN_RX_FIFO0, &RxHeader, RxData) == HAL_OK)
-//        {
-//            /* --- BURADAN İTİBAREN SENİN KODLARIN BAŞLIYOR --- */
-//
-//            uint8_t uart_paket[11];
-//            uart_paket[0] = 0xAA;   // Başlangıç Byte (Header)
-//
-//            // CAN ID'sine göre paket tipini belirle (Hız mı, Batarya mı?)
-//            uart_paket[1] = (RxHeader.Identifier == 0x101) ? 1 : 2;
-//
-//            // 8 Byte'lık CAN verisini paketin ortasına kopyala
-//            memcpy(&uart_paket[2], RxData, 8);
-//
-//            uart_paket[10] = 0x55;  // Bitiş Byte (Footer)
-//
-//            /* 2. Hazırlanan 11 Byte'lık Paketi Bilgisayara (Qt) Gönder */
-//            HAL_UART_Transmit(&huart2, uart_paket, 11, 10);
-//
-//            /* --- KODLARIN BURADA BİTTİ --- */
-//
-//            // Görsel geri bildirim için LED'i yak/söndür
-//            HAL_GPIO_TogglePin(GPIOA, GPIO_PIN_5);
-//        }
-//    }
-//}
-
-
-
-//void HAL_FDCAN_RxFifo0Callback(FDCAN_HandleTypeDef *hfdcan, uint32_t RxFifo0ITs)
-//{
-//    if ((RxFifo0ITs & FDCAN_IT_RX_FIFO0_NEW_MESSAGE) != 0U)
-//    {
-//        if (HAL_FDCAN_GetRxMessage(hfdcan, FDCAN_RX_FIFO0, &RxHeader, RxData) == HAL_OK)
-//        {
-//            // 1. ADIM: Verileri Nucleo hafızasında güncelle (Live Expressions için)
-//            if (RxHeader.Identifier == 0x101)
-//            {
-//                gelen_hiz = RxData[0];
-//                int16_t guc_raw = (int16_t)(RxData[2] << 8 | RxData[1]);
-//                gelen_anlik_kw = guc_raw / 10.0f;
-//                uint16_t tuk_raw = (uint16_t)(RxData[4] << 8 | RxData[3]);
-//                gelen_tuketim_100km = tuk_raw / 10.0f;
-//            }
-//            else if (RxHeader.Identifier == 0x102)
-//            {
-//                gelen_batarya_yuzde = RxData[0];
-//                uint16_t men_raw = (uint16_t)(RxData[2] << 8 | RxData[1]);
-//                gelen_menzil_km = (float)men_raw;
-//                uint16_t trip_raw = (uint16_t)(RxData[4] << 8 | RxData[3]);
-//                gelen_toplam_kwh = trip_raw / 100.0f;
-//            }
-//
-//            // 2. ADIM: Qt'ye Gönderim (KRİTİK NOKTA)
-//            // Qt'nin hangi verinin ne olduğunu anlaması için paket başına ID ekliyoruz.
-//            uint8_t uart_paketi[9];
-//            uart_paketi[0] = (uint8_t)(RxHeader.Identifier & 0xFF); // ID'nin son hanesi (0x01 veya 0x02)
-//
-//            for(int i=0; i<8; i++) {
-//                uart_paketi[i+1] = RxData[i]; // Kalan 8 byte veriyi ekle
-//            }
-//
-//            // Qt'ye toplam 9 byte gönderiyoruz: [ID] [D0] [D1] [D2] [D3] [D4] [D5] [D6] [D7]
-//            HAL_UART_Transmit(&huart2, uart_paketi, 9, 10);
-//
-//            HAL_GPIO_TogglePin(GPIOA, GPIO_PIN_5);
-//        }
-//    }
-//}
 /* USER CODE END 4 */
 
 /**
