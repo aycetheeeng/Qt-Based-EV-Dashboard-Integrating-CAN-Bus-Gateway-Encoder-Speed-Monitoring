@@ -76,9 +76,19 @@ Rectangle {
         anchors.leftMargin: 163
         anchors.topMargin: 55
         source: "assets/sagsinyal_on.png"
-        // visible: serialHandler.rightSignal
+        visible: serialHandler.rightSignal
 
-    }
+        // YANIP SÖNME EFEKTİ
+        opacity: 1.0
+
+        Timer {
+            interval: 350
+            running: serialHandler.rightSignal
+            repeat: true
+
+            onTriggered: sagsinyal_on.opacity = (sagsinyal_on.opacity === 1.0 ? 0.0 : 1.0)
+            }
+        }
 
     Image {
         id: solsinyal_off
@@ -87,8 +97,19 @@ Rectangle {
         anchors.leftMargin: 78
         anchors.topMargin: 55
         source: "assets/solsinyal_off.png"
-        // visible: serialHandler.leftSignal
-    }
+        visible: serialHandler.leftSignal
+
+        // YANIP SÖNME EFEKTİ
+        opacity: 1.0
+
+        Timer {
+            interval: 350
+            running: serialHandler.leftSignal
+            repeat: true
+
+            onTriggered: solsinyal_off.opacity = (solsinyal_off.opacity === 1.0 ? 0.0 : 1.0)
+            }
+        }
 
     Image {
         id: rectangle_3
@@ -114,7 +135,7 @@ Rectangle {
         text: qsTr("8:12 AM")
         anchors.left: parent.left
         anchors.top: parent.top
-        anchors.leftMargin: 519
+        anchors.leftMargin: 544
         anchors.topMargin: 13
         font.letterSpacing: 8.625
         font.pixelSize: 32
@@ -186,7 +207,8 @@ Rectangle {
         source: "assets/p_R_N_D.png"
     }
 
-/*    Image {
+
+    /*    Image {
         id: km
         anchors.left: parent.left
         anchors.top: parent.top
@@ -197,8 +219,8 @@ Rectangle {
 */
     Text {
         id: km
-        text: serialHandler.menzilDisplay
         color: "#FFFFFF"
+        text: serialHandler.menzilDisplay
         font.family: "Audiowide"
         font.pixelSize: 48
         anchors.left: parent.left
@@ -216,7 +238,8 @@ Rectangle {
         source: "assets/element.png"
     }
 
-/*    Image {
+
+    /*    Image {
         id: element1
         anchors.left: parent.left
         anchors.top: parent.top
@@ -229,16 +252,18 @@ Rectangle {
         id: element1
         text: serialHandler.bataryaValue
         color: "#FFA500"
+        font.pixelSize: 40
         font.family: "Audiowide"
-        font.pixelSize: 48
         anchors.left: parent.left
         anchors.top: parent.top
-        anchors.leftMargin: 230
-        anchors.topMargin: 259
+        anchors.leftMargin: 200
+        anchors.topMargin: 270
         // Sayı değiştikçe pürüzsüz görünmesi için antialiasing
         antialiasing: true
     }
-/*    Image {
+
+
+    /*    Image {
         id: kW
         anchors.left: parent.left
         anchors.top: parent.top
@@ -252,16 +277,17 @@ Rectangle {
         text: serialHandler.kwDisplay // JavaScript yok, sadece hazır metni çekiyor
         color: "#FFFFFF"
         font.family: "Audiowide"
-        font.pixelSize: 48
+        font.pixelSize: 55
         // Konumlandırma         // Eski resminin koordinatlarını koruyoruz
         anchors.left: parent.left
         anchors.top: parent.top
-        anchors.leftMargin: 929
-        anchors.topMargin: 330
+        anchors.leftMargin: 922
+        anchors.topMargin: 340
         // Sayı değiştikçe pürüzsüz görünmesi için antialiasing
         antialiasing: true
     }
-    Image {
+
+ /*   Image {
         id: kWh
         anchors.left: parent.left
         anchors.top: parent.top
@@ -269,7 +295,18 @@ Rectangle {
         anchors.topMargin: 397
         source: "assets/kWh.png"
     }
-
+*/
+    Text {
+        id: kWh
+        text: serialHandler.tuketimDisplay
+        color: "#FFFFFF"
+        font.family: "Audiowide"
+        font.pixelSize: 30
+        anchors.left: parent.left
+        anchors.top: parent.top
+        anchors.leftMargin: 960
+        anchors.topMargin: 412
+    }
     Image {
         id: km1
         anchors.left: parent.left
@@ -392,6 +429,7 @@ Rectangle {
         source: "assets/km2.png"
     }
 
+
     /*Image {
         id: element2
         anchors.left: parent.left
@@ -400,30 +438,29 @@ Rectangle {
         anchors.topMargin: 592
         source: "assets/element2.png"
     }*/
-
     Text {
-            id: speedValueText
-            // ARTIK BURAYA serialHandler.speedValue YAZIYORUZ
-            text: serialHandler.speedValue
-            color: "#ffffff"
+        id: speedValueText
+        // ARTIK BURAYA serialHandler.speedValue YAZIYORUZ
+        text: serialHandler.speedValue
+        color: "#ffffff"
 
-            // Font ayarları
-            font.family: "Audiowide"
-            font.pixelSize: 128
-            font.weight: Font.Normal
+        // Font ayarları
+        font.family: "Audiowide"
+        font.pixelSize: 128
+        font.weight: Font.Normal
 
-            // Konumlandırma (Figma X:536, Y:577 değerlerine göre)
-            anchors.left: parent.left
-            anchors.top: parent.top
-            anchors.leftMargin: 536
-            anchors.topMargin: 577
+        // Konumlandırma (Figma X:536, Y:577 değerlerine göre)
+        anchors.left: parent.left
+        anchors.top: parent.top
+        anchors.leftMargin: 536
+        anchors.topMargin: 577
 
-            // Metni kutu içinde ortala
-            width: 223 // Figma'daki W değeri
-            height: 138 // Figma'daki H değeri
-            horizontalAlignment: Text.AlignHCenter
-            verticalAlignment: Text.AlignVCenter
-        }
+        // Metni kutu içinde ortala
+        width: 223 // Figma'daki W değeri
+        height: 138 // Figma'daki H değeri
+        horizontalAlignment: Text.AlignHCenter
+        verticalAlignment: Text.AlignVCenter
+    }
 
     Image {
         id: rEADY
@@ -520,7 +557,7 @@ Rectangle {
         text: qsTr("SPORT")
         anchors.left: parent.left
         anchors.top: parent.top
-        anchors.leftMargin: 183
+        anchors.leftMargin: 195
         anchors.topMargin: 482
         font.pixelSize: 24
         horizontalAlignment: Text.AlignLeft
@@ -538,7 +575,7 @@ Rectangle {
         text: qsTr("ECO")
         anchors.left: parent.left
         anchors.top: parent.top
-        anchors.leftMargin: 199
+        anchors.leftMargin: 208
         anchors.topMargin: 529
         font.pixelSize: 24
         horizontalAlignment: Text.AlignLeft
@@ -556,7 +593,7 @@ Rectangle {
         text: qsTr("COMFORT")
         anchors.left: parent.left
         anchors.top: parent.top
-        anchors.leftMargin: 162
+        anchors.leftMargin: 176
         anchors.topMargin: 576
         font.pixelSize: 24
         horizontalAlignment: Text.AlignLeft
@@ -567,34 +604,26 @@ Rectangle {
     }
 }
 
+
 /*##^##
 Designer {
-    D{i:0;uuid:"f6d1cd8c-ab7b-5538-a9c9-79344b9ea07b"}D{i:1;uuid:"11a70a82-5f51-54af-88b1-605d290c9ea5"}
-D{i:2;uuid:"f8372b4b-04c8-5b89-9f10-47c2bd4f593a"}D{i:3;uuid:"992dc76d-50b7-584b-8f98-9c7241651517"}
-D{i:4;uuid:"d5cfa3fd-c10a-5e8e-b0c2-874f0fa90ead"}D{i:5;uuid:"8cb9f161-de6c-5d5e-8a5b-e7431b385405"}
-D{i:6;uuid:"63dd71d9-1744-57c7-bf6c-831efb7beb65"}D{i:7;uuid:"a5e4b998-0724-5544-a7e2-504d58277e24"}
-D{i:8;uuid:"825b705d-1b58-5dc3-98cd-3de82543c145"}D{i:9;uuid:"06e106ec-a238-582b-8d7e-813650fbc79b"}
-D{i:10;uuid:"14205b99-b5a3-546a-bbf3-649c63490ac6"}D{i:11;uuid:"37809dda-b6e1-5321-9f63-b07991699a6e"}
-D{i:12;uuid:"2493b861-25dd-59d0-8c8b-697175cea125"}D{i:13;uuid:"9919822e-6910-5cf1-9333-5c849d58d497"}
-D{i:14;uuid:"8837ce62-b536-5dc4-9f95-1ed8d52b4173"}D{i:15;uuid:"bc55a223-2174-5fc8-b386-444374f4f9c0"}
-D{i:16;uuid:"3823b889-cd70-5783-b9d3-6d821e480a76"}D{i:17;uuid:"8edac497-a330-5801-9838-29f6511ee913"}
-D{i:18;uuid:"9480569d-82bc-5810-aa5b-80457b322638"}D{i:19;uuid:"9b57eff0-8153-5991-a85b-69364b0dd5d2"}
-D{i:20;uuid:"23661db1-b1a2-582a-af58-245ebdae2e2d"}D{i:21;uuid:"94003543-d2b1-53ef-9de7-84d964c93f74"}
-D{i:22;uuid:"6eedcffe-d4c7-5571-bf02-1c40a89e0c74"}D{i:23;uuid:"5c15e952-50c3-5368-b1f9-2079c99a3198"}
-D{i:24;uuid:"9439f21b-700d-513c-8b99-d36ee5278202"}D{i:25;uuid:"26a932ef-d71f-5ff9-a6f4-32bb09d7ba77"}
-D{i:26;uuid:"1c2188c9-7484-5929-af27-a8838fcd6644"}D{i:27;uuid:"92c88973-8338-5f75-ac49-41ad3ade6c93"}
-D{i:28;uuid:"a0e89c28-8b29-592f-a702-afda34091e61"}D{i:29;uuid:"dff7b95d-c6e8-5327-98d1-632a98c00ac0"}
-D{i:30;uuid:"39024620-9422-5e6d-80bf-13862fb73662"}D{i:31;uuid:"11d207b4-a5b8-5ef4-a682-8800f4cb8d0c"}
-D{i:32;uuid:"eccad3f7-38eb-57a7-b4a0-950ede5c4de2"}D{i:33;uuid:"385365a7-e7ad-5ece-83ea-e824c15b340e"}
-D{i:34;uuid:"070b4090-9a2f-5da6-a7d1-284733bf614d"}D{i:35;uuid:"e9805de8-4850-5579-b4d0-242b4272506e"}
-D{i:36;uuid:"97649ce6-e377-5ddb-a5a7-615f14b440ba"}D{i:37;uuid:"bd9c340b-966e-5213-b0cf-64d81138dbea"}
-D{i:38;uuid:"9aef5513-6970-532d-a359-cbcc15f1402d"}D{i:39;uuid:"106c4611-982e-5ec1-a34e-aeecf80d8f7d"}
-D{i:40;uuid:"e46457da-b5f5-5254-a605-99a3335df0f5"}D{i:41;uuid:"d11b51c0-f5c8-52c5-a151-76f85198d4d0"}
+    D{i:0;uuid:"f6d1cd8c-ab7b-5538-a9c9-79344b9ea07b"}D{i:2;uuid:"f8372b4b-04c8-5b89-9f10-47c2bd4f593a"}
+D{i:3;uuid:"992dc76d-50b7-584b-8f98-9c7241651517"}D{i:4;uuid:"d5cfa3fd-c10a-5e8e-b0c2-874f0fa90ead"}
+D{i:5;uuid:"8cb9f161-de6c-5d5e-8a5b-e7431b385405"}D{i:6;uuid:"63dd71d9-1744-57c7-bf6c-831efb7beb65"}
+D{i:7;uuid:"a5e4b998-0724-5544-a7e2-504d58277e24"}D{i:8;uuid:"825b705d-1b58-5dc3-98cd-3de82543c145"}
+D{i:9;uuid:"06e106ec-a238-582b-8d7e-813650fbc79b"}D{i:10;uuid:"14205b99-b5a3-546a-bbf3-649c63490ac6"}
+D{i:11;uuid:"37809dda-b6e1-5321-9f63-b07991699a6e"}D{i:14;uuid:"8837ce62-b536-5dc4-9f95-1ed8d52b4173"}
+D{i:15;uuid:"bc55a223-2174-5fc8-b386-444374f4f9c0"}D{i:16;uuid:"3823b889-cd70-5783-b9d3-6d821e480a76"}
+D{i:17;uuid:"8edac497-a330-5801-9838-29f6511ee913"}D{i:18;uuid:"9480569d-82bc-5810-aa5b-80457b322638"}
+D{i:19;uuid:"9b57eff0-8153-5991-a85b-69364b0dd5d2"}D{i:26;uuid:"1c2188c9-7484-5929-af27-a8838fcd6644"}
+D{i:27;uuid:"92c88973-8338-5f75-ac49-41ad3ade6c93"}D{i:28;uuid:"a0e89c28-8b29-592f-a702-afda34091e61"}
+D{i:29;uuid:"dff7b95d-c6e8-5327-98d1-632a98c00ac0"}D{i:30;uuid:"39024620-9422-5e6d-80bf-13862fb73662"}
+D{i:31;uuid:"11d207b4-a5b8-5ef4-a682-8800f4cb8d0c"}D{i:32;uuid:"eccad3f7-38eb-57a7-b4a0-950ede5c4de2"}
+D{i:33;uuid:"385365a7-e7ad-5ece-83ea-e824c15b340e"}D{i:34;uuid:"070b4090-9a2f-5da6-a7d1-284733bf614d"}
+D{i:35;uuid:"e9805de8-4850-5579-b4d0-242b4272506e"}D{i:36;uuid:"97649ce6-e377-5ddb-a5a7-615f14b440ba"}
+D{i:37;uuid:"bd9c340b-966e-5213-b0cf-64d81138dbea"}D{i:41;uuid:"d11b51c0-f5c8-52c5-a151-76f85198d4d0"}
 D{i:42;uuid:"ed805369-a005-5cd5-b7f4-80a15263f370"}D{i:43;uuid:"5c133346-026c-5dca-8be9-3d4d2c9f16be"}
-D{i:44;uuid:"fac4ef19-96c2-5925-bd0e-3f8edf2142ec"}D{i:45;uuid:"edebcc7f-3626-5df7-8061-6a8fd79bccda"}
-D{i:46;uuid:"dcdb5d6f-d8ea-590d-a1d0-03fab4aa12ef"}D{i:47;uuid:"da47bb1d-033a-5064-aeb4-a12fd2e08db8"}
-D{i:48;uuid:"9b37e64b-03af-5eb6-ad26-93eec2bec772"}D{i:49;uuid:"d48f2067-f59f-546c-9660-d96e16ffee37"}
-D{i:50;uuid:"2ab75a22-7515-5639-8544-254322c6413b"}D{i:51;uuid:"12f5d62b-20b8-52fa-a54e-3bd53c8b875a"}
+D{i:44;uuid:"fac4ef19-96c2-5925-bd0e-3f8edf2142ec"}D{i:50;uuid:"2ab75a22-7515-5639-8544-254322c6413b"}
 }
 ##^##*/
 
