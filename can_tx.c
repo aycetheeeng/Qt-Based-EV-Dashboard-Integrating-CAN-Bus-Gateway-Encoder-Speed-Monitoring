@@ -7,6 +7,7 @@
 
 #include "can_tx.h"
 
+
 void batarya(void)
 {
     srand(HAL_GetTick());
@@ -94,24 +95,24 @@ void farlar(void){
 
 void drivemod(void)
 {
-	  // DRIVE MOD
-	  	  if (HAL_GPIO_ReadPin(BTN1_GPIO_Port, BTN1_Pin) == GPIO_PIN_RESET)
-	  	      {
-	  	          HAL_Delay(50); // Buton arkını (debounce) engellemek için bekle
+	// DRIVE MOD
+	if (HAL_GPIO_ReadPin(BTN1_GPIO_Port, BTN1_Pin) == GPIO_PIN_RESET)
+	{
+		HAL_Delay(50); // Buton arkını (debounce) engellemek için bekle
 
-	  	          if (HAL_GPIO_ReadPin(BTN1_GPIO_Port, BTN1_Pin) == GPIO_PIN_RESET)
-	  	          {
-	  	              mode++; // Modu 1 artır (1'di 2 oldu, 2'ydi 3 oldu...)
+	  	if (HAL_GPIO_ReadPin(BTN1_GPIO_Port, BTN1_Pin) == GPIO_PIN_RESET)
+	  	{
+	  		mode++; // Modu 1 artır (1'di 2 oldu, 2'ydi 3 oldu...)
 
-	  	              if (mode > 3)
-	  	              {
-	  	                  mode = 1; // 4. basışta (veya 3'ü geçince) tekrar başa, yani 1'e dön
-	  	              }
+	  		if (mode > 3)
+	  			{
+	  				mode = 1; // 4. basışta (veya 3'ü geçince) tekrar başa, yani 1'e dön
+	  			}
 
-	  	              // Kullanıcı elini butondan çekene kadar burada bekle (Sonsuz artışı önler)
-	  	              while (HAL_GPIO_ReadPin(BTN1_GPIO_Port, BTN1_Pin) == GPIO_PIN_RESET);
-	  	          }
-	  	      }
+	  	// Kullanıcı elini butondan çekene kadar burada bekle (Sonsuz artışı önler)
+	  		while (HAL_GPIO_ReadPin(BTN1_GPIO_Port, BTN1_Pin) == GPIO_PIN_RESET);
+	  	}
+	}
 	  	      // =================================================================
 	  	      // 2. ADIM: SWITCH-CASE İLE MODLARIN KONTROLÜ
 	  	      // =================================================================
@@ -145,6 +146,7 @@ void prndhesap(void){
           PRND_val = HAL_ADC_GetValue(&hadc3);
       }
       HAL_ADC_Stop(&hadc3);
+
 }
 
 
@@ -220,11 +222,10 @@ void Hesaplamalar(void){
 	  	      }
 }
 
-
-
 void UARTgonderim(void)
 {
     uint32_t su_anki_zaman = HAL_GetTick();
+    uint8_t blink = ((HAL_GetTick() / 350) % 2);
 
     /* =====================================================
        CAN GÖNDERİM KATMANI (500ms'de bir)
@@ -276,8 +277,6 @@ void UARTgonderim(void)
             &TxMailbox
         );
 
-
-
         /* =====================================================
            0x102 → BATARYA VERİLERİ
            ===================================================== */
@@ -316,8 +315,6 @@ void UARTgonderim(void)
             &TxMailbox
         );
 
-
-
         /* =====================================================
            0x103 → BUTON / FAR / SİNYAL
            ===================================================== */
@@ -339,9 +336,11 @@ void UARTgonderim(void)
             );
 
         // SOL SİNYAL
+        //TxData103[3] = (sol_aktif ? blink : 0);
         TxData103[3] = sol_aktif;
 
         // SAĞ SİNYAL
+        //TxData103[4] = (sag_aktif ? blink : 0);
         TxData103[4] = sag_aktif;
 
         // DÖRTLÜ DURUMU
@@ -349,8 +348,12 @@ void UARTgonderim(void)
             (sol_aktif && sag_aktif);
 
         // BOŞ
-        TxData103[6] = 0;
-        TxData103[7] = 0;
+        //TxData103[6] = 0;
+        //TxData103[7] = 0;
+
+        // BOŞ olan 6 ve 7. baytları 12-bit ADC verisi için birleştirdik
+        TxData103[6] = (PRND_val >> 8) & 0xFF; // Üst bitler (High Byte)
+        TxData103[7] = PRND_val & 0xFF;        // Alt bitler (Low Byte)
 
         while(HAL_CAN_GetTxMailboxesFreeLevel(&hcan1) == 0);
 
@@ -365,95 +368,6 @@ void UARTgonderim(void)
         }
 }
 }
-
-
-
-//void UARTgonderim(void){
-//
-//	uint32_t su_anki_zaman = HAL_GetTick();
-//
-//
-//	// uint32_t su_anki_zaman;
-//	  	/* =====================================================
-//	  	   CAN GÖNDERİM KATMANI (500ms'de bir)
-//	  	   ===================================================== */
-//	  	if (su_anki_zaman - can_zaman_2 >= 500)
-//	  	{
-//	  	    can_zaman_2 = su_anki_zaman;
-//
-//	  	    /* =========================
-//	  	       0x101 → SÜRÜŞ
-//	  	       ========================= */
-//	  	    TxHeader.StdId = 0x101;
-//	  	    TxHeader.DLC = 8;
-//
-//	  	    TxData[0] = (uint8_t)tam_sayi_kalibre_hiz;
-//
-//	  	    int16_t guc_send = (int16_t)(anlik_kw * 10);
-//	  	    TxData[1] = (uint8_t)(guc_send & 0xFF);
-//	  	    TxData[2] = (uint8_t)((guc_send >> 8) & 0xFF);
-//
-//	  	    uint16_t tuketim_send = (uint16_t)(anlik_tuketim_100km * 10);
-//	  	    TxData[3] = (uint8_t)(tuketim_send & 0xFF);
-//	  	    TxData[4] = (uint8_t)((tuketim_send >> 8) & 0xFF);
-//
-//	  	    TxData[5] = 0;
-//	  	    TxData[6] = 0;
-//	  	    TxData[7] = 0;
-//
-//	  	    while (HAL_CAN_GetTxMailboxesFreeLevel(&hcan1) == 0);
-//	  	    HAL_CAN_AddTxMessage(&hcan1, &TxHeader, TxData, &TxMailbox);
-//
-//
-//	  	    /* =========================
-//	  	       0x102 → BATARYA
-//	  	       ========================= */
-//	  	    TxHeader.StdId = 0x102;
-//
-//	  	    TxData[0] = (uint8_t)batarya_yuzdesi;
-//
-//	  	    uint16_t menzil_send = (uint16_t)kalan_menzil_km;
-//	  	    TxData[1] = (uint8_t)(menzil_send & 0xFF);
-//	  	    TxData[2] = (uint8_t)((menzil_send >> 8) & 0xFF);
-//
-//	  	    uint16_t trip_send = (uint16_t)(toplam_kwh * 100);
-//	  	    TxData[3] = (uint8_t)(trip_send & 0xFF);
-//	  	    TxData[4] = (uint8_t)((trip_send >> 8) & 0xFF);
-//
-//	  	    TxData[5] = 0;
-//	  	    TxData[6] = 0;
-//	  	    TxData[7] = 0;
-//
-//	  	    while (HAL_CAN_GetTxMailboxesFreeLevel(&hcan1) == 0);
-//	  	    HAL_CAN_AddTxMessage(&hcan1, &TxHeader, TxData, &TxMailbox);
-//	  	}
-//
-//
-//	  	/* =====================================================
-//	  	   5) CAN GÖNDERİM KATMANI (0x103)
-//	  	   ===================================================== */
-//
-//
-//	  	if (HAL_GetTick() - can_zaman_2 >= 500)
-//	  	{
-//	  	    can_zaman_2 = HAL_GetTick();
-//
-//	  	    TxHeader.StdId = 0x103;
-//	  	    TxHeader.IDE   = CAN_ID_STD;
-//	  	    TxHeader.DLC   = 1;
-//
-//	  	    TxData[0] = sinyal_durumu;
-//
-//	  	    while (HAL_CAN_GetTxMailboxesFreeLevel(&hcan1) == 0);
-//
-//	  	    if (HAL_CAN_AddTxMessage(&hcan1, &TxHeader, TxData, &TxMailbox) == HAL_OK)
-//	  	    {
-//	  	        HAL_GPIO_TogglePin(GPIOD, GPIO_PIN_15);
-//	  	    }
-//	  	}
-//  }
-
-
 
 // HIZ HESAPLAMA
 
@@ -525,195 +439,3 @@ void Enerji_Hesapla() {
     }
 }
 
-
-
-
-
-
-
-
-//void Hiz_Hesapla(void) {
-//    uint32_t puls_temp;
-//
-//    __disable_irq();
-//    puls_temp = motor_puls_sayaci;
-//    motor_puls_sayaci = 0;
-//    __enable_irq();
-//
-//    // HESAPLAMA
-//    float tekerlek_tur_sayisi = (float)puls_temp / (ppr * reduksiyon);
-//    gercek_fiziksel_hiz = (tekerlek_tur_sayisi * tekerlek_cevre) * 3.6f;
-//    kalibre_edilen_hiz = gercek_fiziksel_hiz * 2.819f;
-//
-//    // YENİ: Düşük hızlarda yuvarlama yerine küçük bir eşik kontrolü
-//    if (puls_temp > 0 && kalibre_edilen_hiz < 1.0f) {
-//        tam_sayi_kalibre_hiz = 1; // En azından hareket ettiğini göster
-//    } else {
-//        tam_sayi_kalibre_hiz = (int)(kalibre_edilen_hiz + 0.5f);
-//    }
-//}
-
-//GPIO_PinState pin_durumu = GPIO_PIN_RESET;
-
-//void Hiz_Hesapla(void) {
-//
-//	pin_durumu = HAL_GPIO_ReadPin(GPIOD, GPIO_PIN_12);
-//    // 1. Donanımdaki sayaç değerini senin değişkenine kopyala
-//    motor_puls_sayaci = __HAL_TIM_GET_COUNTER(&htim4);
-//
-//    // 2. Bir sonraki saniye/periyot için donanım sayacını hemen sıfırla
-//    __HAL_TIM_SET_COUNTER(&htim4, 0);
-//
-//    // 3. Senin Değişkenlerinle Matematiksel Hesaplama
-//    // Tek kanal olduğu için ekstra bir bölme/çarpma yok, formülün orijinal halini koruyoruz
-//    float tekerlek_tur_sayisi = (float)motor_puls_sayaci / (ppr * reduksiyon);
-//
-//    gercek_fiziksel_hiz = (tekerlek_tur_sayisi * tekerlek_cevre) * 3.6f;
-//    kalibre_edilen_hiz = gercek_fiziksel_hiz * 2.819f;
-//
-//    // Live Watch'ta gördüğün tam sayı dönüşümü (Eşik kontrollü)
-//    if (motor_puls_sayaci > 0 && kalibre_edilen_hiz < 0.5f) {
-//        tam_sayi_kalibre_hiz = 1;
-//    } else {
-//        tam_sayi_kalibre_hiz = (int)(kalibre_edilen_hiz + 0.5f);
-//    }
-//}
-
-
-//void HAL_TIM_IC_CaptureCallback(TIM_HandleTypeDef *htim)
-//{
-//    if(htim->Instance == TIM4)
-//    {
-//        uint32_t now = HAL_TIM_ReadCapturedValue(htim, TIM_CHANNEL_1);
-//
-//        if(last_capture != 0)
-//        {
-//            if(now >= last_capture)
-//                pulse_period = now - last_capture;
-//            else
-//                pulse_period = (0xFFFF - last_capture) + now;
-//
-//            if(pulse_period > 0)
-//            {
-//                float freq = 1000000.0f / pulse_period;
-//
-//                // pulses_per_rev = senin sistem:
-//                float pulses_per_rev = (float)(ppr * reduksiyon);
-//
-//                motor_rpm = (freq / pulses_per_rev) * 60.0f;
-//            }
-//        }
-//        last_capture = now;
-//    }
-//}
-
-
-
-// main fonskiyonundan sonra altında
-// PE9 dan kesme ile encoder sinyal pinini okuma (ver1)                                       ***
-
-//void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin) {
-//    if(GPIO_Pin == GPIO_PIN_9) { // PE9'dan sinyal gelince
-//        motor_puls_sayaci++;
-//
-//                // BAYRAĞI TEMİZLEMEZSEN İŞLEMCİ BİR DAHA KESMEYE GİRMEZ!
-//                __HAL_GPIO_EXTI_CLEAR_IT(GPIO_PIN_9);
-//    }
-//}
-
-
-// PE9 dan kesme ile encoder sinyal pinini okuma (ver2)                                        ***
-
-//void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin)
-//{
-//    if(GPIO_Pin == GPIO_PIN_9)
-//    {
-//        motor_puls_sayaci++;
-//    }
-//}
-
-// PE9 dan kesme ile encoder sinyal pinini okuma (ver3)                                         ***
-
-//void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin)
-//{
-//    static uint32_t son_tetiklenme_zamani = 0;
-//    uint32_t simdiki_zaman = HAL_GetTick();
-//
-//    if(GPIO_Pin == GPIO_PIN_9)
-//    {
-//        // Sadece son tetiklenmeden bu yana 5ms geçtiyse say
-//        // Bu, gürültüden kaynaklanan hızlı 0-1 değişimlerini görmezden gelmenizi sağlar.
-//        if ((simdiki_zaman - son_tetiklenme_zamani) > 2)
-//        {
-//            motor_puls_sayaci++;
-//            son_tetiklenme_zamani = simdiki_zaman;
-//        }
-//    }
-//}
-
-//
-///* ================= DÖRTLÜ YEŞİL SİNYALLER ================= */
-//
-//if(HAL_GPIO_ReadPin(GPIOD, BTN4_Pin) == GPIO_PIN_RESET)
-//{
-//    if((HAL_GetTick() / 350) % 2 == 0)
-//    {
-//        HAL_GPIO_WritePin(GPIOB, SOL_SINYAL_Pin, GPIO_PIN_SET);
-//        HAL_GPIO_WritePin(GPIOB, SAG_SINYAL_Pin, GPIO_PIN_SET);
-//        HAL_GPIO_WritePin(GPIOB, DORTLU_Pin, GPIO_PIN_SET);
-//    }
-//    else
-//    {
-//        HAL_GPIO_WritePin(GPIOB, SOL_SINYAL_Pin, GPIO_PIN_RESET);
-//        HAL_GPIO_WritePin(GPIOB, SAG_SINYAL_Pin, GPIO_PIN_RESET);
-//        HAL_GPIO_WritePin(GPIOB, DORTLU_Pin, GPIO_PIN_RESET);
-//    }
-//}
-//
-///* ================= SOL ================= */
-//
-//else if(HAL_GPIO_ReadPin(GPIOD, BTN2_Pin) == GPIO_PIN_RESET)
-//{
-//    HAL_GPIO_WritePin(GPIOB, SAG_SINYAL_Pin, GPIO_PIN_RESET);
-//
-//    if((HAL_GetTick() / 350) % 2 == 0)
-//    {
-//        HAL_GPIO_WritePin(GPIOB, SOL_SINYAL_Pin, GPIO_PIN_SET);
-//    }
-//    else
-//    {
-//        HAL_GPIO_WritePin(GPIOB, SOL_SINYAL_Pin, GPIO_PIN_RESET);
-//    }
-//}
-//
-///* ================= SAĞ ================= */
-//
-//else if(HAL_GPIO_ReadPin(GPIOD, BTN3_Pin) == GPIO_PIN_RESET)
-//{
-//    HAL_GPIO_WritePin(GPIOB, SOL_SINYAL_Pin, GPIO_PIN_RESET);
-//
-//    if((HAL_GetTick() / 350) % 2 == 0)
-//    {
-//        HAL_GPIO_WritePin(GPIOB, SAG_SINYAL_Pin, GPIO_PIN_SET);
-//    }
-//    else
-//    {
-//        HAL_GPIO_WritePin(GPIOB, SAG_SINYAL_Pin, GPIO_PIN_RESET);
-//    }
-//}
-//
-///* ================= HİÇBİRİ ================= */
-//
-//else
-//{
-//    HAL_GPIO_WritePin(GPIOB, SOL_SINYAL_Pin, GPIO_PIN_RESET);
-//    HAL_GPIO_WritePin(GPIOB, SAG_SINYAL_Pin, GPIO_PIN_RESET);
-//  HAL_GPIO_WritePin(GPIOB, DORTLU_Pin, GPIO_PIN_RESET);
-//}
-//
-//
-//if (sol_aktif && sag_aktif) sinyal_durumu = 3;
-//else if (sol_aktif)         sinyal_durumu = 1;
-//else if (sag_aktif)         sinyal_durumu = 2;
-//else                        sinyal_durumu = 0;
-//
