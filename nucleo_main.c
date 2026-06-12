@@ -8,7 +8,7 @@
   * It acts as the 'Receiver' and 'Bridge' between CAN Bus and Tablet/UI.
   * @author         : Ayçe Mısırlılar (Senior EEE Student)
   * @version        : V1.1.0_G431_RX
-  * @date           : 05-April-2026
+  * @date           : 13-June-2026
   ******************************************************************************
   * @architecture   : FDCAN (Operating in Classic CAN mode) @ 500kbps
   * @hardware       : Nucleo-G431RB / Custom G431 Board
