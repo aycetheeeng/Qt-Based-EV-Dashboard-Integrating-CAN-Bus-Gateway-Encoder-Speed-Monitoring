@@ -2,7 +2,9 @@
 #include <QQmlApplicationEngine>
 #include <QQmlContext>
 #include "serialhandler.h"
-#include "autogen/environment.h" // Otomatik yollar için şart
+#include "autogen/environment.h" // Otomatik yollar için şart 
+
+// 13.06.2026
 
 int main(int argc, char *argv[])
 {
