@@ -16,10 +16,37 @@
 #include "stdlib.h"
 #include <stdbool.h>
 
+#define MAX_PULSE 407.0f
+#define N_YAVASLAMA_PERIYODU 400 // N vitesindeyken yavaşlama hızı (Büyük değer = daha geç yavaşlar)
+#define D_HIZLANMA_PERIYODU  400 // N'den D'ye geçince ani fırlamayı önleyen hızlanma rampası
+                                // (Büyük değer = daha yumuşak hızlanır, tork şokunu engeller)
 
 void Hiz_Hesapla(void);
 void Guc_Hesapla(void);
 void Enerji_Hesapla(void);
+
+typedef enum {
+    VITES_P = 0,
+    VITES_R = 1,
+    VITES_N = 2,
+    VITES_D = 3
+} VitesKonumu_t;
+
+VitesKonumu_t mevcut_vites = VITES_P;
+VitesKonumu_t hedef_vites = VITES_P;
+VitesKonumu_t son_surus_yonu = VITES_D;
+
+
+// --- YENİ BİRLEŞTİRİLMİŞ RAMPA DEĞİŞKENLERİ ---
+int16_t aktif_gaz = 0;          // Motora gerçekten uygulanan anlık PWM hızı (0-100)
+uint16_t rampa_sayaci = 0;      // Hızlanma ve yavaşlama zamanlaması için ortak sayaç
+
+int PRND_val = 0;
+
+// --- YENİ: N VİTESİ YAVAŞLAMA DEĞİŞKENLERİ ---
+int16_t n_simule_gaz = 0;       // N vitesindeki sanal azalan hızımız
+uint16_t n_yavaslama_sayaci = 0; // Yavaşlama hızını ayarlamak için sayaç
+
 
   // 1. CAN Hattını Başlat (Ekrana veri gitmesi için şart)
 
@@ -76,9 +103,9 @@ volatile  uint32_t pulse_period       = 0;
 volatile  int16_t  gaz_degeri         = 0;
 volatile  float motor_rpm = 0;
 
-const     float kalibrasyon_katsayisi = 2.819f;   // Sabit çarpanımız (78.04'ü 220'ye tamamlayan sihirli sayı)
+const     float kalibrasyon_katsayisi = 0.25f;   // Sabit çarpanımız (78.04'ü 220'ye tamamlayan sihirli sayı)
 
-int       ppr                         = 11;       // Motorunun PPR değerini buraya yaz
+int       ppr                         = 10;       // Motorunun PPR değerini buraya yaz
 int       reduksiyon                  = 10;       // Dişli oranını buraya yaz
 int       tam_sayi_kalibre_hiz        = 0;        // Ekrana basılacak temiz tam sayı
 int       PRND_val;
