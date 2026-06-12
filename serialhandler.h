@@ -26,6 +26,7 @@ class SerialHandler : public QObject
 
     // FORMATLANMIŞ STRINGLER
     Q_PROPERTY(QString kwDisplay READ kwDisplay NOTIFY dataChanged)
+    Q_PROPERTY(QString kWhDisplay READ kWhDisplay NOTIFY dataChanged)
     Q_PROPERTY(QString menzilDisplay READ menzilDisplay NOTIFY dataChanged)
     Q_PROPERTY(QString tuketimDisplay READ tuketimDisplay NOTIFY dataChanged)
 
@@ -73,6 +74,11 @@ public:
     QString kwDisplay() const
     {
         return QString::number(m_kw, 'f', 1) + " kW";
+    }
+
+    QString kWhDisplay() const
+    {
+        return QString::number(m_toplamKwh, 'f', 1) + " kWh";
     }
 
     QString menzilDisplay() const
