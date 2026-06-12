@@ -7,6 +7,165 @@
 
 #include "can_tx.h"
 
+void MotorVeVitesKontrol(void) {
+    /* --- ADIM 1: VİTESİ (PRND) OKU (ADC3) --- */
+    HAL_ADC_Start(&hadc3);
+    if (HAL_ADC_PollForConversion(&hadc3, 10) == HAL_OK) {
+        PRND_val = HAL_ADC_GetValue(&hadc3);
+    }
+    HAL_ADC_Stop(&hadc3);
+
+    /* --- ADIM 2: ARALIKLARA GÖRE HEDEF VİTESİ SEÇ --- */
+    bool target_p = (PRND_val < 4096 && PRND_val > 4050);
+    bool target_r = (PRND_val < 3250 && PRND_val > 3180);
+    bool target_n = (PRND_val < 2520 && PRND_val > 2430);
+    bool target_d = (PRND_val < 1650 && PRND_val > 1570);
+
+    if (target_p)      hedef_vites = VITES_P;
+    else if (target_r) hedef_vites = VITES_R;
+    else if (target_n) hedef_vites = VITES_N;
+    else if (target_d) hedef_vites = VITES_D;
+
+    /* --- ADIM 3: POTU (GAZ) OKU (ADC1) --- */
+    HAL_ADC_Start(&hadc1);
+    if (HAL_ADC_PollForConversion(&hadc1, 10) == HAL_OK) {
+        adc_val = HAL_ADC_GetValue(&hadc1);
+        gaz_degeri = (int16_t)((adc_val * 100) / 4095);
+    }
+    HAL_ADC_Stop(&hadc1);
+
+    /* --- ADIM 4: AKILLI VİTES GEÇİŞ MATRİSİ (SHIFT INHIBIT) - GÜNCELLENEN KISIM --- */
+    if (mevcut_vites != hedef_vites) {
+
+        // KURAL 1: N (Boş) vitesine her an güvenle geçilebilir
+        if (hedef_vites == VITES_N) {
+            mevcut_vites = VITES_N;
+        }
+
+        // KURAL 2: P vitesine geçebilmek için araç durmalı ve gaz bırakılmalı
+        else if (hedef_vites == VITES_P) {
+            if (motor_puls_sayaci == 0 && gaz_degeri < 5) {
+                mevcut_vites = VITES_P;
+            }
+        }
+
+        // KURAL 3: R (Geri) vitesine geçebilmek için araç durmalı ve gaz bırakılmalı
+        else if (hedef_vites == VITES_R) {
+            if (motor_puls_sayaci == 0 && gaz_degeri < 5) {
+                mevcut_vites = VITES_R;
+            }
+        }
+
+        // KURAL 4: D (Sürüş) vitesine geçiş kontrolü (Çift Yönlü Güvenlik Kilidi)
+        else if (hedef_vites == VITES_D) {
+            // Eğer araç zaten tamamen duruyorsa doğrudan D'ye geçebilir
+            if (motor_puls_sayaci == 0 && gaz_degeri < 5) {
+                mevcut_vites = VITES_D;
+            }
+            // Seyir halindeyken geçiş şartı: Sadece araç ileri süzülüyorsa (N'deyse ve yönü D ise) izin ver
+            // Araç geri gidiyorsa veya R'den N'ye alınıp hala arkaya süzülüyorsa D'ye geçiş bloke edilir!
+            else if (mevcut_vites == VITES_N && son_surus_yonu == VITES_D) {
+                mevcut_vites = VITES_D;
+            }
+        }
+    }
+
+    /* --- ADIM 5: SÜRÜŞ MODLARINA GÖRE AKTİF GAZ (RAMPA) FİLTRESİ --- */
+    rampa_sayaci++;
+
+    if (mevcut_vites == VITES_N) {
+        // N Modunda Yavaşlama Dinamiği (Süzülme)
+        if (rampa_sayaci >= N_YAVASLAMA_PERIYODU) {
+            rampa_sayaci = 0;
+            if (aktif_gaz > 0) {
+                aktif_gaz--;
+            }
+        }
+    }
+    else if (mevcut_vites == VITES_D) {
+        // SADECE D MODUNDA: Tork Şoku Engelleme (Hızlanma Rampası)
+        if (rampa_sayaci >= D_HIZLANMA_PERIYODU) {
+            rampa_sayaci = 0;
+
+            if (aktif_gaz < gaz_degeri) {
+                aktif_gaz++; // İleri giderken tatlı tatlı hızlan
+            }
+            else if (aktif_gaz > gaz_degeri) {
+                aktif_gaz = gaz_degeri; // Gazdan çekince anında tepki ver
+            }
+        }
+    }
+    else if (mevcut_vites == VITES_R) {
+        // R Modunda rampa tamamen devre dışı! Manevra için pottan ne okunuyorsa ANINDA motora iletilir.
+        aktif_gaz = gaz_degeri;
+    }
+    else {
+        // P modunda hız doğrudan 0
+        aktif_gaz = 0;
+    }
+
+    /* --- ADIM 6: ONAYLANAN VİTESE GÖRE MOTORU YÖNET --- */
+    switch (mevcut_vites) {
+
+        case VITES_P:
+            HAL_GPIO_WritePin(GPIOE, GPIO_PIN_7, GPIO_PIN_RESET);
+            HAL_GPIO_WritePin(GPIOE, GPIO_PIN_8, GPIO_PIN_RESET);
+            __HAL_TIM_SET_COMPARE(&htim3, TIM_CHANNEL_1, 0);
+            break;
+
+        case VITES_N:
+            if (aktif_gaz < 5) {
+                HAL_GPIO_WritePin(GPIOE, GPIO_PIN_7, GPIO_PIN_RESET);
+                HAL_GPIO_WritePin(GPIOE, GPIO_PIN_8, GPIO_PIN_RESET);
+                __HAL_TIM_SET_COMPARE(&htim3, TIM_CHANNEL_1, 0);
+            } else {
+                if (son_surus_yonu == VITES_D) {
+                    HAL_GPIO_WritePin(GPIOE, GPIO_PIN_7, GPIO_PIN_SET);
+                    HAL_GPIO_WritePin(GPIOE, GPIO_PIN_8, GPIO_PIN_RESET);
+                } else {
+                    HAL_GPIO_WritePin(GPIOE, GPIO_PIN_7, GPIO_PIN_RESET);
+                    HAL_GPIO_WritePin(GPIOE, GPIO_PIN_8, GPIO_PIN_SET);
+                }
+                uint8_t min_calisma = 50;
+                uint16_t hesap = min_calisma + ((uint16_t)aktif_gaz * (100 - min_calisma) / 100);
+                __HAL_TIM_SET_COMPARE(&htim3, TIM_CHANNEL_1, (uint8_t)hesap);
+            }
+            break;
+
+        case VITES_D:
+            son_surus_yonu = VITES_D;
+            if (aktif_gaz < 5) {
+                HAL_GPIO_WritePin(GPIOE, GPIO_PIN_7, GPIO_PIN_RESET);
+                HAL_GPIO_WritePin(GPIOE, GPIO_PIN_8, GPIO_PIN_RESET);
+                __HAL_TIM_SET_COMPARE(&htim3, TIM_CHANNEL_1, 0);
+            } else {
+                HAL_GPIO_WritePin(GPIOE, GPIO_PIN_7, GPIO_PIN_SET);
+                HAL_GPIO_WritePin(GPIOE, GPIO_PIN_8, GPIO_PIN_RESET);
+
+                uint8_t min_calisma = 50;
+                uint16_t hesap = min_calisma + ((uint16_t)aktif_gaz * (100 - min_calisma) / 100);
+                __HAL_TIM_SET_COMPARE(&htim3, TIM_CHANNEL_1, (uint8_t)hesap);
+            }
+            break;
+
+        case VITES_R:
+            son_surus_yonu = VITES_R;
+            if (aktif_gaz < 5) {
+                HAL_GPIO_WritePin(GPIOE, GPIO_PIN_7, GPIO_PIN_RESET);
+                HAL_GPIO_WritePin(GPIOE, GPIO_PIN_8, GPIO_PIN_RESET);
+                __HAL_TIM_SET_COMPARE(&htim3, TIM_CHANNEL_1, 0);
+            } else {
+                HAL_GPIO_WritePin(GPIOE, GPIO_PIN_7, GPIO_PIN_RESET);
+                HAL_GPIO_WritePin(GPIOE, GPIO_PIN_8, GPIO_PIN_SET);
+
+                uint8_t min_calisma = 50;
+                uint16_t hesap = min_calisma + ((uint16_t)aktif_gaz * (100 - min_calisma) / 100);
+                __HAL_TIM_SET_COMPARE(&htim3, TIM_CHANNEL_1, (uint8_t)hesap);
+            }
+            break;
+    }
+}
+
 
 void batarya(void)
 {
@@ -137,50 +296,68 @@ void drivemod(void)
 	  	      }
 }
 
-void prndhesap(void){
+//void prndhesap(void){
+//
+//      // PRND için
+//      HAL_ADC_Start(&hadc3);
+//      if (HAL_ADC_PollForConversion(&hadc3, 10) == HAL_OK)
+//      {
+//          PRND_val = HAL_ADC_GetValue(&hadc3);
+//      }
+//      HAL_ADC_Stop(&hadc3);
+//
+//}
 
-      // PRND için
-      HAL_ADC_Start(&hadc3);
-      if (HAL_ADC_PollForConversion(&hadc3, 10) == HAL_OK)
-      {
-          PRND_val = HAL_ADC_GetValue(&hadc3);
-      }
-      HAL_ADC_Stop(&hadc3);
 
-}
+//void ADCHizOlc(void){
+//      /* --- ADIM 1: POTU OKU (ADC1) --- */
+//      HAL_ADC_Start(&hadc1);
+//      if (HAL_ADC_PollForConversion(&hadc1, 10) == HAL_OK)
+//      {
+//          adc_val = HAL_ADC_GetValue(&hadc1);
+//          gaz_degeri = (int16_t)((adc_val * 100) / 4095);
+//      }
+//      HAL_ADC_Stop(&hadc1);
+//
+//  	  /////// potu çevirince hızı ayarlıyoruz ama ölü bölgeyi ayırarak
+//  		 if (gaz_degeri < 5)
+//  		 {
+//  		  	  // MOTORU DURDUR: Gaz pedalı sıfıra yakınsa motoru tamamen kapat
+//  		  	  HAL_GPIO_WritePin(GPIOE, GPIO_PIN_7, GPIO_PIN_RESET);
+//  		  	  HAL_GPIO_WritePin(GPIOE, GPIO_PIN_8, GPIO_PIN_RESET);
+//  		  	  __HAL_TIM_SET_COMPARE(&htim3, TIM_CHANNEL_1, 0);
+//  		 }
+//
+//  		else
+//  		{
+//  		    // MOTORU SÜR
+//  		    HAL_GPIO_WritePin(GPIOE, GPIO_PIN_7, GPIO_PIN_SET);
+//  		    HAL_GPIO_WritePin(GPIOE, GPIO_PIN_8, GPIO_PIN_RESET);
+//
+//  		    uint8_t min_calisma = 50;
+//
+//  		    // HATA BURADA: Hesaplamayı uint16_t içinde yapıyoruz
+//  		    uint16_t hesap = min_calisma + ((uint16_t)gaz_degeri * (100 - min_calisma) / 100);
+//
+//  		    // PWM çıkışına güvenle aktarıyoruz
+//  		    __HAL_TIM_SET_COMPARE(&htim3, TIM_CHANNEL_1, (uint8_t)hesap);
+//  		}
+//  		 else
+//  		 {
+//  		  	  // MOTORU SÜR: Gaz verildiyse motoru çalıştır
+//  		  	  HAL_GPIO_WritePin(GPIOE, GPIO_PIN_7, GPIO_PIN_SET);
+//  		  	  HAL_GPIO_WritePin(GPIOE, GPIO_PIN_8, GPIO_PIN_RESET);
+//
+//  		  	  uint8_t min_calisma = 50; 	  	                         // Motorun "vınlamadan" dönmeye başladığı en düşük sınır
+//  		  	  // 0-100 aralığını 70-100 arasına yayıyoruz (Mapping)
+//  		  	  // Bu sayede potu çevirdiğinde motor vınlamadan tık diye döner
+//  		  	  uint8_t pwm_cikisi = min_calisma + ((gaz_degeri * (100 - min_calisma)) / 100);
+//  		  	  __HAL_TIM_SET_COMPARE(&htim3, TIM_CHANNEL_1, pwm_cikisi);
+//  		 }
+//}
 
+//}
 
-void ADCHizOlc(void){
-      /* --- ADIM 1: POTU OKU (ADC1) --- */
-      HAL_ADC_Start(&hadc1);
-      if (HAL_ADC_PollForConversion(&hadc1, 10) == HAL_OK)
-      {
-          adc_val = HAL_ADC_GetValue(&hadc1);
-          gaz_degeri = (int16_t)((adc_val * 100) / 4095);
-      }
-      HAL_ADC_Stop(&hadc1);
-
-  	  /////// potu çevirince hızı ayarlıyoruz ama ölü bölgeyi ayırarak
-  		 if (gaz_degeri < 5)
-  		 {
-  		  	  // MOTORU DURDUR: Gaz pedalı sıfıra yakınsa motoru tamamen kapat
-  		  	  HAL_GPIO_WritePin(GPIOE, GPIO_PIN_7, GPIO_PIN_RESET);
-  		  	  HAL_GPIO_WritePin(GPIOE, GPIO_PIN_8, GPIO_PIN_RESET);
-  		  	  __HAL_TIM_SET_COMPARE(&htim3, TIM_CHANNEL_1, 0);
-  		 }
-  		 else
-  		 {
-  		  	  // MOTORU SÜR: Gaz verildiyse motoru çalıştır
-  		  	  HAL_GPIO_WritePin(GPIOE, GPIO_PIN_7, GPIO_PIN_SET);
-  		  	  HAL_GPIO_WritePin(GPIOE, GPIO_PIN_8, GPIO_PIN_RESET);
-
-  		  	  uint8_t min_calisma = 50; 	  	                         // Motorun "vınlamadan" dönmeye başladığı en düşük sınır
-  		  	  // 0-100 aralığını 70-100 arasına yayıyoruz (Mapping)
-  		  	  // Bu sayede potu çevirdiğinde motor vınlamadan tık diye döner
-  		  	  uint8_t pwm_cikisi = min_calisma + ((gaz_degeri * (100 - min_calisma)) / 100);
-  		  	  __HAL_TIM_SET_COMPARE(&htim3, TIM_CHANNEL_1, pwm_cikisi);
-  		 }
-}
 
 void akimoku(void){
   /* --- YENİ ADIM: AKIM SENSÖRÜNÜ OKU (ADC2 - PA1) --- */
@@ -225,7 +402,7 @@ void Hesaplamalar(void){
 void UARTgonderim(void)
 {
     uint32_t su_anki_zaman = HAL_GetTick();
-    uint8_t blink = ((HAL_GetTick() / 350) % 2);
+    //uint8_t blink = ((HAL_GetTick() / 350) % 2);
 
     /* =====================================================
        CAN GÖNDERİM KATMANI (500ms'de bir)
@@ -371,24 +548,81 @@ void UARTgonderim(void)
 
 // HIZ HESAPLAMA
 
-void Hiz_Hesapla() {
-    // 1. Önceki hesaplamaların aynen kalsın
-    float rps = (float)motor_puls_sayaci / (ppr * reduksiyon);
-    gercek_fiziksel_hiz = rps * tekerlek_cevre * 3.6f;
-    kalibre_edilen_hiz = gercek_fiziksel_hiz * kalibrasyon_katsayisi;
+void Hiz_Hesapla(void)
+{
+    kalibre_edilen_hiz =
+        ((float)motor_puls_sayaci * 220.0f) / MAX_PULSE;
 
-    // 2. Limitör
-    if (kalibre_edilen_hiz > 220.0f) {
+    if (kalibre_edilen_hiz > 220.0f)
+    {
         kalibre_edilen_hiz = 220.0f;
     }
 
-    // 3. TAM SAYIYA DÖNÜŞTÜRME (Yuvarlayarak)
-    // 0.5 ekleyip int'e zorlarsak en yakın tam sayıya yuvarlar
     tam_sayi_kalibre_hiz = (int)(kalibre_edilen_hiz + 0.5f);
 
-    // Sayacı sıfırla
     motor_puls_sayaci = 0;
 }
+
+
+//void Hiz_Hesapla() {
+//    // 1. Önceki hesaplamaların aynen kalsın
+//    float rps = (float)motor_puls_sayaci / (ppr * reduksiyon);
+//    gercek_fiziksel_hiz = rps * tekerlek_cevre * 3.6f;
+//    kalibre_edilen_hiz = gercek_fiziksel_hiz * kalibrasyon_katsayisi;
+//
+//    // 2. Limitör
+//    if (kalibre_edilen_hiz > 220.0f) {
+//        kalibre_edilen_hiz = 220.0f;
+//    }
+//
+//    // 3. TAM SAYIYA DÖNÜŞTÜRME (Yuvarlayarak)
+//    // 0.5 ekleyip int'e zorlarsak en yakın tam sayıya yuvarlar
+//    tam_sayi_kalibre_hiz = (int)(kalibre_edilen_hiz + 0.5f);
+//
+//    // Sayacı sıfırla
+//    motor_puls_sayaci = 0;
+//}
+
+
+
+//void Hiz_Hesapla() {
+//    su_anki_zaman = HAL_GetTick(); // STM32'nin anlık milisaniyesi
+//
+//    // 1. İki hesaplama arasında geçen süreyi buluyoruz
+//    uint32_t gecen_sure_ms = su_anki_zaman - son_zaman;
+//
+//    // KRİTİK DÜZELTME: Zamanı hemen burada güncelliyoruz ki hafıza karışmasın!
+//    son_zaman = su_anki_zaman;
+//
+//    // Koruma: Eğer fonksiyon 0 ms veya 1 ms gibi aşırı kısa sürede tekrar çağrıldıysa
+//    // hesaplama yapma, bir sonraki ana döngüyü bekle.
+//    if (gecen_sure_ms < 5) {
+//        return;
+//    }
+//
+//    // Milisaniyeyi saniyeye çeviriyoruz
+//    float gecen_sure_saniye = (float)gecen_sure_ms / 1000.0f;
+//
+//    // 2. rps hesaplama (Puls / Süre)
+//    float rps = ((float)motor_puls_sayaci / (ppr * reduksiyon)) / gecen_sure_saniye;
+//
+//    // Sayacı sıfırla (Süreyi kaydettiğimiz için artık güvenle sıfırlayabiliriz)
+//    motor_puls_sayaci = 0;
+//
+//    // 3. Hız hesaplamaları
+//    gercek_fiziksel_hiz = rps * tekerlek_cevre * 3.6f;
+//    kalibre_edilen_hiz = gercek_fiziksel_hiz * kalibrasyon_katsayisi;
+//
+//    // 4. Limitör
+//    if (kalibre_edilen_hiz > 220.0f) {
+//        kalibre_edilen_hiz = 220.0f;
+//    }
+//
+//    // 5. TAM SAYIYA DÖNÜŞTÜRME
+//    tam_sayi_kalibre_hiz = (int)(kalibre_edilen_hiz + 0.5f);
+//}
+
+
 
 //GUC HESAPLAMA
 
