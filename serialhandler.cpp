@@ -55,14 +55,14 @@ void SerialHandler::readData()
         uint8_t msgType = static_cast<uint8_t>(packet[1]);
 
         // 4. VERİLERİ DOĞRU İNDEKSLE EŞLEŞTİR (Kayma tamamen düzeltildi)
-        int rxData0 = static_cast<int>(packet[2]);
-        int rxData1 = static_cast<int>(packet[3]);
-        int rxData2 = static_cast<int>(packet[4]);
-        int rxData3 = static_cast<int>(packet[5]); // Sol Sinyal
-        int rxData4 = static_cast<int>(packet[6]); // Sağ Sinyal
-        int rxData5 = static_cast<int>(packet[7]);
-        int rxData6 = static_cast<int>(packet[8]);
-        int rxData7 = static_cast<int>(packet[9]);
+        int rxData0 = static_cast<uint8_t>(packet[2]);
+        int rxData1 = static_cast<uint8_t>(packet[3]);
+        int rxData2 = static_cast<uint8_t>(packet[4]);
+        int rxData3 = static_cast<uint8_t>(packet[5]); // Sol Sinyal
+        int rxData4 = static_cast<uint8_t>(packet[6]); // Sağ Sinyal
+        int rxData5 = static_cast<uint8_t>(packet[7]);
+        int rxData6 = static_cast<uint8_t>(packet[8]);
+        int rxData7 = static_cast<uint8_t>(packet[9]);
 
         // --- TERMİNALDE KESİNTİSİZ GÖSTERİM BÖLÜMÜ ---
         qDebug() << "------------------------------------------";
@@ -70,6 +70,43 @@ void SerialHandler::readData()
         qDebug() << "Data[0]:" << rxData0 << "Data[1]:" << rxData1 << "Data[2]:" << rxData2;
         qDebug() << "Data[3]:" << rxData3 << "Data[4]:" << rxData4 << "Data[5]:" << rxData5;
         qDebug() << "Data[6]:" << rxData6 << "Data[7]:" << rxData7;
+
+
+        if (msgType == 1)
+        {
+            m_speed = rxData0;
+
+            int16_t kw_raw = (int16_t)((rxData2 << 8) | rxData1);
+            m_kw = kw_raw / 10.0f;
+
+            uint16_t tuketim_raw = (uint16_t)((rxData4 << 8) | rxData3);
+            m_tuketim = tuketim_raw / 10.0f;
+
+            emit speedValueChanged();
+            emit dataChanged();
+        }
+
+        if (msgType == 2)
+        {
+            m_batarya = rxData0;
+
+            uint16_t menzil_raw =
+                (uint16_t)((rxData2 << 8) | rxData1);
+
+            m_menzil = menzil_raw;
+
+            uint16_t kwh_raw =
+                (uint16_t)((rxData4 << 8) | rxData3);
+
+            m_toplamKwh = kwh_raw / 100.0f;
+
+            qDebug() << "[0x102]"
+                     << "bat:" << m_batarya
+                     << "menzil:" << m_menzil
+                     << "kWh:" << m_toplamKwh;
+
+            emit dataChanged();
+        }
 
         // 5. SADECE RxData103 GELİRSE SİNYAL MANTIĞINI ÇALIŞTIR
         if (msgType == 3)
