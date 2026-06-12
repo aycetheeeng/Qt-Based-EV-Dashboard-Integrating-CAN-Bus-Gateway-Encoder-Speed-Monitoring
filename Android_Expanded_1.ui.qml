@@ -303,13 +303,26 @@ Rectangle {
         visible: !serialHandler.d_signal
     }
 
-    Image {
+/*    Image {
         id: kalan_km_text
         anchors.left: parent.left
         anchors.top: parent.top
         anchors.leftMargin: 519
         anchors.topMargin: 299
         source: "assets/kalan_km_text.png"
+    } */
+
+    Text {
+        id: km
+        text: serialHandler.menzilDisplay
+        color: "#FFFFFF"
+        font.family: "Audiowide"
+        font.pixelSize: 48
+        anchors.left: parent.left
+        anchors.top: parent.top
+        anchors.leftMargin: 519
+        anchors.topMargin: 299
+        antialiasing: true
     }
 
     Image {
@@ -328,15 +341,31 @@ Rectangle {
         anchors.leftMargin: 179
         anchors.topMargin: 259
         source: "assets/batarya_yuzdesi_kirmizi_text.png"
+        visible: false
     }
 
-    Image {
+/*    Image {
         id: batarya_yuzdesi_turuncu_text
         anchors.left: parent.left
         anchors.top: parent.top
         anchors.leftMargin: 179
         anchors.topMargin: 259
         source: "assets/batarya_yuzdesi_turuncu_text.png"
+        visible: true
+    } */
+
+    Text {
+        id: element1
+        text: serialHandler.bataryaValue
+        color: "#FFA500"
+        font.family: "Audiowide"
+        font.pixelSize: 48
+        anchors.left: parent.left
+        anchors.top: parent.top
+        anchors.leftMargin: 230
+        anchors.topMargin: 259
+        // Sayı değiştikçe pürüzsüz görünmesi için antialiasing
+        antialiasing: true
     }
 
     Image {
@@ -346,6 +375,7 @@ Rectangle {
         anchors.leftMargin: 179
         anchors.topMargin: 259
         source: "assets/batarya_yuzdesi_sari_text.png"
+        visible: false
     }
 
     Image {
@@ -355,6 +385,7 @@ Rectangle {
         anchors.leftMargin: 179
         anchors.topMargin: 259
         source: "assets/batarya_yuzdesi_yesil_text.png"
+        visible: false
     }
 
     Image {
@@ -364,33 +395,64 @@ Rectangle {
         anchors.leftMargin: 179
         anchors.topMargin: 259
         source: "assets/batarya_yuzdesi_gri_text.png"
+        visible: false
     }
 
-    Image {
+ /*   Image {
         id: kW_text
         anchors.left: parent.left
         anchors.top: parent.top
         anchors.leftMargin: 929
         anchors.topMargin: 330
         source: "assets/kW_text.png"
+    }*/
+
+    Text {
+        id: kw
+        text: serialHandler.kwDisplay // JavaScript yok, sadece hazır metni çekiyor
+        color: "#FFFFFF"
+        font.family: "Audiowide"
+        font.pixelSize: 48
+        // Konumlandırma         // Eski resminin koordinatlarını koruyoruz
+        anchors.left: parent.left
+        anchors.top: parent.top
+        anchors.leftMargin: 929
+        anchors.topMargin: 330
+        // Sayı değiştikçe pürüzsüz görünmesi için antialiasing
+        antialiasing: true
     }
 
-    Image {
+    Text {
+        id: kWh_renkli
+        text: serialHandler.kWhDisplay // JavaScript yok, sadece hazır metni çekiyor
+        color: "#FFFFFF"
+        font.family: "Audiowide"
+        font.pixelSize: 28
+        // Konumlandırma         // Eski resminin koordinatlarını koruyoruz
+        anchors.left: parent.left
+        anchors.top: parent.top
+        anchors.leftMargin: 955
+        anchors.topMargin: 397
+        // Sayı değiştikçe pürüzsüz görünmesi için antialiasing
+        antialiasing: true
+    }
+/*    Image {
         id: kWh_renkli_text
         anchors.left: parent.left
         anchors.top: parent.top
         anchors.leftMargin: 938
         anchors.topMargin: 397
         source: "assets/kWh_renkli_text.png"
-    }
+    } */
 
     Image {
         id: kWh_renksiz_text
         anchors.left: parent.left
         anchors.top: parent.top
-        anchors.leftMargin: 938
+        anchors.leftMargin: 955
         anchors.topMargin: 397
         source: "assets/kWh_renksiz_text.png"
+        visible: false
     }
 
     Image {
@@ -407,6 +469,7 @@ Rectangle {
         x: 870
         y: 242
         source: "assets/cember_renkli.png"
+        visible: true
     }
 
     Image {
@@ -414,6 +477,7 @@ Rectangle {
         x: 870
         y: 242
         source: "assets/cember_renksiz.png"
+        visible: false
     }
 
     Image {
@@ -441,6 +505,7 @@ Rectangle {
         anchors.leftMargin: 206
         anchors.topMargin: 738
         source: "assets/a_otomatiklamba_acik.png"
+        visible: false
     }
 
     Image {
@@ -477,6 +542,7 @@ Rectangle {
         anchors.leftMargin: 845
         anchors.topMargin: 720
         source: "assets/danger_acik.png"
+        visible: false
     }
 
     Image {
@@ -486,6 +552,7 @@ Rectangle {
         anchors.leftMargin: 845
         anchors.topMargin: 720
         source: "assets/danger_kapali.png"
+        visible: true
     }
 
     Image {
@@ -533,6 +600,7 @@ Rectangle {
         anchors.leftMargin: 100
         anchors.topMargin: 717
         source: "assets/uzunlar_acik.png"
+        visible: false
     }
 
     Image {
@@ -542,6 +610,7 @@ Rectangle {
         anchors.leftMargin: 104
         anchors.topMargin: 717
         source: "assets/uzunlar_kapali.png"
+        visible: true
     }
 
     Image {
@@ -560,6 +629,7 @@ Rectangle {
         anchors.leftMargin: 172
         anchors.topMargin: 717
         source: "assets/otomatiklamba_kapali.png"
+        visible: true
     }
 
     Image {
@@ -571,15 +641,38 @@ Rectangle {
         source: "assets/km_h.png"
     }
 
-    Image {
+/*    Image {
         id: velocity_text
         anchors.left: parent.left
         anchors.top: parent.top
         anchors.leftMargin: 519
         anchors.topMargin: 592
         source: "assets/velocity_text.png"
-    }
+    } */
 
+    Text {
+            id: speedValueText
+            // ARTIK BURAYA serialHandler.speedValue YAZIYORUZ
+            text: serialHandler.speedValue
+            color: "#ffffff"
+
+            // Font ayarları
+            font.family: "Audiowide"
+            font.pixelSize: 128
+            font.weight: Font.Normal
+
+            // Konumlandırma (Figma X:536, Y:577 değerlerine göre)
+            anchors.left: parent.left
+            anchors.top: parent.top
+            anchors.leftMargin: 536
+            anchors.topMargin: 577
+
+            // Metni kutu içinde ortala
+            width: 223 // Figma'daki W değeri
+            height: 138 // Figma'daki H değeri
+            horizontalAlignment: Text.AlignHCenter
+            verticalAlignment: Text.AlignVCenter
+        }
     Image {
         id: rEADY
         anchors.left: parent.left
@@ -596,6 +689,7 @@ Rectangle {
         anchors.leftMargin: 234
         anchors.topMargin: 717
         source: "assets/onsis_acik.png"
+        visible: false
     }
 
     Image {
@@ -605,6 +699,7 @@ Rectangle {
         anchors.leftMargin: 234
         anchors.topMargin: 717
         source: "assets/onsis_kapali.png"
+        visible: true
     }
 
     Image {
@@ -634,6 +729,7 @@ Rectangle {
         anchors.leftMargin: 1081
         anchors.topMargin: 720
         source: "assets/kapi_acik.png"
+        visible: false
     }
 
     Image {
@@ -643,6 +739,7 @@ Rectangle {
         anchors.leftMargin: 1085
         anchors.topMargin: 720
         source: "assets/kapi_kapali.png"
+        visible: true
     }
 
     Image {
