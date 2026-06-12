@@ -26,6 +26,7 @@
 /* USER CODE END Header */
 /* Includes ------------------------------------------------------------------*/
 #include "main.h"
+
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
 #include "stdio.h"
@@ -40,7 +41,7 @@
 
 /* Private define ------------------------------------------------------------*/
 /* USER CODE BEGIN PD */
-
+#define MIN_PULSE_INTERVAL_MS 5
 /* USER CODE END PD */
 
 /* Private macro -------------------------------------------------------------*/
@@ -60,6 +61,12 @@ TIM_HandleTypeDef htim4;
 
 /* USER CODE BEGIN PV */
 extern CAN_TxHeaderTypeDef TxHeader;
+extern uint32_t  motor_puls_sayaci;
+
+uint32_t son_puls_zamani = 0;
+
+
+volatile uint32_t encoder_count = 0;
 
 /* USER CODE END PV */
 
@@ -83,12 +90,40 @@ void ADCHizOlc(void);
 void akimoku(void);
 void Hesaplamalar(void);
 void UARTgonderim(void);
+void MotorVeVitesKontrol(void);
 
 /* USER CODE END PFP */
 
 /* Private user code ---------------------------------------------------------*/
 /* USER CODE BEGIN 0 */
 
+//void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin)
+//{
+//    if (GPIO_Pin == GPIO_PIN_9)
+//    {
+//        encoder_count++;
+//    }
+//}
+
+//void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin) {
+//    if(GPIO_Pin == GPIO_PIN_9) {
+//        static uint32_t last_interrupt_time = 0;
+//        uint32_t interrupt_time = HAL_GetTick();
+//
+//        // 1 milisaniyeden daha kısa sürede gelen ikinci sinyali görmezden gel (Gürültü filtresi)
+//        if (interrupt_time - last_interrupt_time > 1) {
+//            motor_puls_sayaci++;
+//        }
+//        last_interrupt_time = interrupt_time;
+//    }
+//}
+
+
+void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin) {
+    if(GPIO_Pin == GPIO_PIN_10) { // PE9'dan sinyal gelince
+        motor_puls_sayaci++;
+    }
+}
 
 /* USER CODE END 0 */
 
@@ -155,8 +190,9 @@ int main(void)
 	    farlar();
 	    drivemod();
 	    // 2) ADC OKUMALARI
-	    prndhesap();
-	    ADCHizOlc();
+	    MotorVeVitesKontrol();
+	    //prndhesap();
+	    //ADCHizOlc();
 	    akimoku();
 	    // 3) HESAPLAMALAR
 	    Hesaplamalar();
@@ -541,9 +577,9 @@ static void MX_GPIO_Init(void)
   GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
   HAL_GPIO_Init(GPIOE, &GPIO_InitStruct);
 
-  /*Configure GPIO pin : PE9 */
-  GPIO_InitStruct.Pin = GPIO_PIN_9;
-  GPIO_InitStruct.Mode = GPIO_MODE_INPUT;
+  /*Configure GPIO pin : PE10 */
+  GPIO_InitStruct.Pin = GPIO_PIN_10;
+  GPIO_InitStruct.Mode = GPIO_MODE_IT_RISING;
   GPIO_InitStruct.Pull = GPIO_NOPULL;
   HAL_GPIO_Init(GPIOE, &GPIO_InitStruct);
 
@@ -574,6 +610,10 @@ static void MX_GPIO_Init(void)
   GPIO_InitStruct.Pull = GPIO_NOPULL;
   GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
   HAL_GPIO_Init(GPIOB, &GPIO_InitStruct);
+
+  /* EXTI interrupt init*/
+  HAL_NVIC_SetPriority(EXTI15_10_IRQn, 5, 0);
+  HAL_NVIC_EnableIRQ(EXTI15_10_IRQn);
 
   /* USER CODE BEGIN MX_GPIO_Init_2 */
 
