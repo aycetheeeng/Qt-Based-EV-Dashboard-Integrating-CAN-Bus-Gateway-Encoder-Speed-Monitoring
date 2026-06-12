@@ -8,7 +8,7 @@
   * It acts as the 'Sender' in the CAN network.
   * @author         : Ayçe Mısırlılar
   * @version        : V1.1.0_F407_TX
-  * @date           : 05-April-2026
+  * @date           : 13-June-2026
   ******************************************************************************
   * @architecture   : Classic CAN (CAN 2.0B) @ 500kbps
   * @hardware       : STM32F407VGT6 Discovery / Custom Board
