@@ -55,6 +55,9 @@ class SerialHandler : public QObject
     // Blink için
     Q_PROPERTY(bool globalBlink READ globalBlink NOTIFY globalBlinkChanged)
 
+    Q_PROPERTY(QString currentTime READ currentTime NOTIFY currentTimeChanged)
+    Q_PROPERTY(QString currentDate READ currentDate NOTIFY currentDateChanged)
+
 public:
     explicit SerialHandler(QObject *parent = nullptr);
 
@@ -90,6 +93,10 @@ public:
     {
         return QString::number(m_tuketim, 'f', 1) + " kWh";
     }
+
+
+    QString currentTime() const { return m_currentTime; }
+    QString currentDate() const { return m_currentDate; }
 
     // SİNYAL GETTER
     bool leftSignal() const { return m_leftSignal; }
@@ -151,6 +158,10 @@ signals:
     // BLİNK
     void globalBlinkChanged();
 
+    // ZAMAN
+    void currentTimeChanged();
+    void currentDateChanged();
+
 private:
 
     // =========================================================
@@ -205,6 +216,11 @@ private:
 
     QTimer *m_flasherTimer;
     bool m_globalBlink = false;
+
+
+    QString m_currentTime;
+    QString m_currentDate;
+    void updateClock(); // Saati tetikleyecek iç fonksiyon
 
 };
 
