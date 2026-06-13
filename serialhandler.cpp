@@ -1,5 +1,7 @@
 #include "serialhandler.h"
 #include <QDebug>
+#include <QDateTime>  // Saat ve Tarih işlemleri için şart
+#include <QTimer>     // Saniyede bir tetikleme için şart
 
 SerialHandler::SerialHandler(QObject *parent)
     : QObject(parent),
@@ -24,6 +26,13 @@ SerialHandler::SerialHandler(QObject *parent)
 
     connect(m_serial, &QSerialPort::readyRead,
             this, &SerialHandler::readData);
+
+
+    QTimer *clockTimer = new QTimer(this);
+    connect(clockTimer, &QTimer::timeout, this, &SerialHandler::updateClock);
+    clockTimer->start(1000); // Her 1 saniyede bir çalışsın
+
+    updateClock(); // İlk açılışta saat boş kalmasın diye hemen bir kere tetikle
 }
 
 
@@ -221,6 +230,25 @@ void SerialHandler::readData()
         } // <-- if (msgType == 3) bloğunun kapanışı
     } // <-- while (m_buffer.size() >= 11) döngüsünün kapanışı
 }
+
+// SAAT OKUMA
+
+void SerialHandler::updateClock()
+{
+    QDateTime current = QDateTime::currentDateTime();
+    QString t = current.toString("hh:mm:ss");
+    QString d = current.toString("dd.MM.yyyy");
+
+    if (m_currentTime != t) {
+        m_currentTime = t;
+        emit currentTimeChanged();
+    }
+    if (m_currentDate != d) {
+        m_currentDate = d;
+        emit currentDateChanged();
+    }
+}
+
 
 /*
 void SerialHandler::readData()
