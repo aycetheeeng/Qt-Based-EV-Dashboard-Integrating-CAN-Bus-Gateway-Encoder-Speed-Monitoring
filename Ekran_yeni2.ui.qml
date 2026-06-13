@@ -109,18 +109,18 @@ Rectangle {
         width: 241
         height: 41
         color: "#ffffff"
-        text: qsTr("8:12 AM")
+        text: serialHandler.currentTime
         anchors.left: parent.left
         anchors.top: parent.top
-        anchors.leftMargin: 546
+        anchors.leftMargin: 533
         anchors.topMargin: 13
         font.letterSpacing: 8.625
-        font.pixelSize: 32
+        font.pixelSize: 42
         horizontalAlignment: Text.AlignLeft
         verticalAlignment: Text.AlignTop
         wrapMode: Text.NoWrap
         font.weight: Font.Normal
-        font.family: "Digital Numbers"
+        font.family: "DS-Digital"
     }
 
     Image {
@@ -325,13 +325,30 @@ Rectangle {
         antialiasing: true
     }
 
-    Image {
+/*    Image {
         id: tarih_text
         anchors.left: parent.left
         anchors.top: parent.top
         anchors.leftMargin: 23
         anchors.topMargin: 1
         source: "assets/tarih_text.png"
+    }*/
+
+    Text {
+        id: tarih_text
+        width: 241
+        height: 80
+        color: "#ffffff"
+        font.letterSpacing: 8.625
+        font.pixelSize: 42
+        // Tıpkı saatteki gibi, doğrudan C++'taki tarih değişkenine bağlıyoruz:
+        text: serialHandler.currentDate
+        anchors.left: parent.left
+        anchors.top: parent.top
+        anchors.leftMargin: 35
+        anchors.topMargin: 10
+        font.weight: Font.Normal
+        font.family: "DS-Digital"
     }
 
     Image {
