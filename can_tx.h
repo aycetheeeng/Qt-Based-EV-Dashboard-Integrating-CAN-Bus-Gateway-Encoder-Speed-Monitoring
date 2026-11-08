@@ -84,7 +84,7 @@ CAN_TxHeaderTypeDef TxHeader;
 uint8_t   TxData[8]                   = {0};      // Test verisi
 uint32_t  TxMailbox                   = 0U;
 
-uint8_t   mode                        = 1;        // Başlangıç modumuz 1 olsun
+uint8_t   mode                        = 1;        // Başlangıç modu 1
 uint8_t   son_durum                   = 0;
 
 //uint32_t  motor_puls_sayaci           = 0;
@@ -94,7 +94,7 @@ uint32_t  su_anki_zaman               = 0;        // HAL_GetTick() değerini tut
 uint32_t son_zaman = 0;
 
 
-volatile  uint32_t adc_val            = 0;        // Debug için global yaptık
+volatile  uint32_t adc_val            = 0;        // Debug için global yapıldı
 volatile  uint32_t motor_puls_sayaci  = 0;
 
 //volatile  uint32_t last_capture       = 0;
@@ -105,9 +105,9 @@ volatile  float motor_rpm = 0;
 
 const     float kalibrasyon_katsayisi = 0.25f;   // Sabit çarpanımız (78.04'ü 220'ye tamamlayan sihirli sayı)
 
-int       ppr                         = 10;       // Motorunun PPR değerini buraya yaz
-int       reduksiyon                  = 10;       // Dişli oranını buraya yaz
-int       tam_sayi_kalibre_hiz        = 0;        // Ekrana basılacak temiz tam sayı
+int       ppr                         = 10;       // Motorunun PPR değeri
+int       reduksiyon                  = 10;       // Dişli oranını
+int       tam_sayi_kalibre_hiz        = 0;        // Ekrana basılacak tam sayı
 int       PRND_val;
 
 float     tekerlek_cevre              = 1.88;     // 60cm çap için metre cinsinden
@@ -116,14 +116,14 @@ float     kalibre_edilen_hiz          = 0;        // Ekranda görünecek olan (2
 float     okunan_voltaj;                          // PA1'deki 0-3.3V arası değer için
 float     gercek_sensor_voltaji;                  // 2 ile çarpılmış hali için
 float     amper;                                  // Sonuç olan Amper değeri için
-float     anlik_amper;                            // Bu Live Watch'ta zıplamasını izleyeceğin ham olan (YENİ!)
+float     anlik_amper;                            
 
 /* --- YENİ EKLENECEK GÜÇ VE ENERJİ DEĞİŞKENLERİ --- */
 
 float     pil_voltaji                 = 12.0f;    // Aracın ana batarya voltajı (Simülasyon için)
 float     anlik_watt                  = 0.0f;     // P = V * I (Anlık Güç)
 float     anlik_kw                    = 0.0f;     // Dashboard'daki küçük kW yazısı için
-float     sanal_kw                    = 0.0f;     // Dashboard'daki büyük 15 kW gibi rakamlar için (Gerekirse)
+float     sanal_kw                    = 0.0f;     // Dashboard'daki büyük 15 kW gibi rakamlar için
 float     toplam_harcanan_wh          = 0.0f;     // Zamanla biriken enerji (Watt-saat)
 float     toplam_kwh                  = 0.0f;     // Yeşil rakam (18.5 kWh) için toplam enerji
 float     verimlilik                  = 0.0f;     // kWh / 100km göstergesi için
