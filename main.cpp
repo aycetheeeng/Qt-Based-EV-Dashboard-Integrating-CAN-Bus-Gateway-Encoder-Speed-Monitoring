@@ -8,24 +8,24 @@
 
 int main(int argc, char *argv[])
 {
-    // 1. Qt Ortamını Hazırla (Bu ekranın gelmesini sağlar)
+    // Qt Ortamını Hazırla 
     set_qt_environment();
 
     QApplication app(argc, argv);
 
-    // 2. Seri Port Nesnesini Oluştur
+    // Seri Port Nesnesini Oluştur
     SerialHandler serialHandler;
 
     QQmlApplicationEngine engine;
 
-    // 3. QML'e Veriyi Tanıt (Daha yükleme yapmadan önce!)
+    // QML'e Veriyi Tanıt 
     engine.rootContext()->setContextProperty("serialHandler", &serialHandler);
 
-    // 4. Dosya Yolunu Otomatik Al
+    // Dosya Yolunu Otomatik Al
     // (mainQmlFile, environment.h içinde tanımlıdır, o yüzden UI açılır)
     const QUrl url(mainQmlFile);
 
-    // 5. Hata Kontrolü (Bağlantı başarılı mı?)
+    // Bağlantı başarılı mı
     QObject::connect(
         &engine, &QQmlApplicationEngine::objectCreated, &app,
         [url](QObject *obj, const QUrl &objUrl) {
@@ -33,14 +33,14 @@ int main(int argc, char *argv[])
                 QCoreApplication::exit(-1);
         }, Qt::QueuedConnection);
 
-    // 6. Import Yollarını Ekle (Resimler ve fontlar için)
+    // Import Yollarını Ekle (Resimler ve fontlar için)
     engine.addImportPath(QCoreApplication::applicationDirPath() + "/qml");
     engine.addImportPath(":/");
 
-    // 7. Arayüzü Yükle
+    // Arayüzü Yükle
     engine.load(url);
 
-    // 8. Eğer yüklenemezse uygulamayı kapat
+    // Eğer yüklenemezse uygulamayı kapat
     if (engine.rootObjects().isEmpty())
         return -1;
 
