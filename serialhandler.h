@@ -4,7 +4,7 @@
 #include <QObject>
 #include <QSerialPort>
 #include <QDebug>
-#include <QTimer>  // <-- Bu eksik olduğu için hata veriyor
+#include <QTimer>
 
 class SerialHandler : public QObject
 {
